@@ -31,7 +31,7 @@ jobs:
 
       - name: Create .env for build
         run: |
-          cat <<'EOF' > .env
+          cat > .env << 'ENVEOF'
           VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_TOKEN_MINT=${{ secrets.VITE_TOKEN_MINT }}
@@ -39,15 +39,21 @@ jobs:
           VITE_TOKEN_SYMBOL=${{ secrets.VITE_TOKEN_SYMBOL }}
           VITE_TOKEN_DECIMALS=${{ secrets.VITE_TOKEN_DECIMALS }}
           VITE_SOLANA_RPC=${{ secrets.VITE_SOLANA_RPC }}
-          EOF
+          ENVEOF
+          echo "--- .env created ---"
+          cat .env
 
       - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE }}
-          region: ${{ env.REGION }}
-          source: .
+        run: |
+          gcloud run deploy $SERVICE \
+            --source . \
+            --region $REGION \
+            --project $PROJECT_ID \
+            --allow-unauthenticated \
+            --port 8080 \
+            --quiet
 
       - name: Show URL
         run: |
-          echo "Deployed to: https://${{ env.SERVICE }}-734813537865.${{ env.REGION }}.run.app"
+          URL=$(gcloud run services describe $SERVICE --region $REGION --project $PROJECT_ID --format="value(status.url)")
+          echo "Deployed to: $URL"
