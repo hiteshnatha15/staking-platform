@@ -31,15 +31,11 @@ jobs:
 
       - name: Create .env for build
         run: |
-          cat > .env << 'ENVEOF'
-          VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_TOKEN_MINT=${{ secrets.VITE_TOKEN_MINT }}
-          VITE_STAKING_VAULT=${{ secrets.VITE_STAKING_VAULT }}
-          VITE_TOKEN_SYMBOL=${{ secrets.VITE_TOKEN_SYMBOL }}
-          VITE_TOKEN_DECIMALS=${{ secrets.VITE_TOKEN_DECIMALS }}
-          VITE_SOLANA_RPC=${{ secrets.VITE_SOLANA_RPC }}
-          ENVEOF
+          echo "VITE_TOKEN_MINT=${{ secrets.VITE_TOKEN_MINT }}" > .env
+          echo "VITE_STAKING_VAULT=${{ secrets.VITE_STAKING_VAULT }}" >> .env
+          echo "VITE_TOKEN_SYMBOL=${{ secrets.VITE_TOKEN_SYMBOL }}" >> .env
+          echo "VITE_TOKEN_DECIMALS=${{ secrets.VITE_TOKEN_DECIMALS }}" >> .env
+          echo "VITE_SOLANA_RPC=${{ secrets.VITE_SOLANA_RPC }}" >> .env
           echo "--- .env created ---"
           cat .env
 
@@ -51,6 +47,7 @@ jobs:
             --project $PROJECT_ID \
             --allow-unauthenticated \
             --port 8080 \
+            --set-env-vars "MONGODB_URI=${{ secrets.MONGODB_URI }}" \
             --quiet
 
       - name: Show URL
