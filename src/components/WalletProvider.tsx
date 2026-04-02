@@ -14,8 +14,7 @@ import '@solana/wallet-adapter-react-ui/styles.css';
  * - Solflare: Same for Solflare mobile app
  * - Works on iOS Safari, Android Chrome when wallet app is installed
  */
-// Free RPCs that work without API key - use these to avoid 403 errors
-const FREE_RPC = 'https://rpc.ankr.com/solana';
+const FREE_RPC = 'https://solana-rpc.publicnode.com';
 
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const endpoint = useMemo(() => {

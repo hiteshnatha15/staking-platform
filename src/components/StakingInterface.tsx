@@ -84,7 +84,8 @@ export const StakingInterface = () => {
     return map;
   }, [withdrawals]);
 
-  const handleStake = async () => {
+  const handleStake = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
     if (!publicKey || !amount || Number(amount) <= 0) return;
     setError(null);
 
@@ -285,6 +286,7 @@ export const StakingInterface = () => {
             </div>
           </div>
           <button
+            type="button"
             onClick={handleStake}
             disabled={isStaking || !amount || Number(amount) <= 0}
             className="w-full btn-primary flex items-center justify-center gap-2 py-3.5 sm:py-4 text-sm sm:text-lg"
