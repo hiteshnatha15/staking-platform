@@ -214,7 +214,7 @@ const CommissionsTab = () => {
           className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         >
           <option value="">All Levels</option>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(l => (
+          {[1, 2, 3].map(l => (
             <option key={l} value={l}>Level {l}</option>
           ))}
         </select>

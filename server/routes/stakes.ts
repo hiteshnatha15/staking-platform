@@ -1,5 +1,38 @@
 import { Router } from 'express';
 import { Stake } from '../models/Stake.js';
+import { ReferralCode } from '../models/ReferralCode.js';
+import { CommissionEarning } from '../models/CommissionEarning.js';
+
+const REFERRAL_LEVELS = [
+  { level: 1, percent: 10 },
+  { level: 2, percent: 5 },
+  { level: 3, percent: 3 },
+];
+
+async function distributeCommissions(stakerWallet: string, stakeAmount: number, stakeId: string) {
+  try {
+    let currentWallet = stakerWallet;
+    for (const { level, percent } of REFERRAL_LEVELS) {
+      const ref = await ReferralCode.findOne({ wallet_address: currentWallet }).lean();
+      if (!ref?.referred_by) break;
+
+      const referrerWallet = ref.referred_by;
+      const commission = stakeAmount * (percent / 100);
+
+      await CommissionEarning.create({
+        wallet_address: referrerWallet,
+        from_wallet: stakerWallet,
+        amount: commission,
+        level,
+        stake_id: stakeId,
+      });
+
+      currentWallet = referrerWallet;
+    }
+  } catch (err) {
+    console.error('Commission distribution error:', err);
+  }
+}
 
 export const stakesRouter = Router();
 
@@ -62,6 +95,10 @@ stakesRouter.post('/', async (req, res) => {
       transaction_signature,
       status: status === 'pending' ? 'pending' : 'active',
     });
+
+    // Distribute referral commissions (non-blocking, uses deposited amount as basis)
+    distributeCommissions(wallet_address, deposited_amount, String(doc._id));
+
     res.status(201).json({ ...doc.toObject(), id: doc._id });
   } catch {
     res.status(500).json({ error: 'Failed to create stake' });
