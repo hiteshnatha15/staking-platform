@@ -17,12 +17,10 @@ const RPC_ENDPOINTS = (() => {
   const customRpc = import.meta.env.VITE_SOLANA_RPC || '';
   const devnetRpc = 'https://api.devnet.solana.com';
   const mainnetRpcs = [
-    'https://rpc.ankr.com/solana',
     'https://solana-rpc.publicnode.com',
+    'https://api.mainnet-beta.solana.com',
     'https://solana.publicnode.com',
     'https://mainnet.rpcpool.com',
-    'https://solana-mainnet.gateway.tatum.io',
-    'https://api.mainnet-beta.solana.com',
   ];
   if (network === 'devnet') return [devnetRpc];
   const rpcs = customRpc ? [customRpc, ...mainnetRpcs.filter(r => r !== customRpc)] : mainnetRpcs;
