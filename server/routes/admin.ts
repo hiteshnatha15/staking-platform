@@ -208,6 +208,152 @@ adminRouter.patch('/withdrawals/:id', async (req: AdminRequest, res) => {
   }
 });
 
+// ────────────────────── Referrals ──────────────────────
+
+adminRouter.get('/referrals', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = 20;
+    const skip = (page - 1) * limit;
+    const filter: Record<string, unknown> = { referred_by: { $ne: null } };
+
+    if (req.query.wallet) {
+      filter.$or = [
+        { wallet_address: { $regex: req.query.wallet, $options: 'i' } },
+        { referred_by: { $regex: req.query.wallet, $options: 'i' } },
+      ];
+    }
+
+    const [docs, total] = await Promise.all([
+      ReferralCode.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+      ReferralCode.countDocuments(filter),
+    ]);
+
+    const wallets = docs.map(d => d.wallet_address);
+    const commissionSums = await CommissionEarning.aggregate([
+      { $match: { from_wallet: { $in: wallets } } },
+      { $group: { _id: '$from_wallet', total: { $sum: '$amount' } } },
+    ]);
+    const commMap: Record<string, number> = {};
+    for (const c of commissionSums) commMap[c._id] = c.total;
+
+    const enriched = docs.map(d => ({
+      id: String(d._id),
+      wallet_address: d.wallet_address,
+      referral_code: d.referral_code,
+      referred_by: d.referred_by,
+      commission_generated: commMap[d.wallet_address] ?? 0,
+      created_at: d.created_at,
+    }));
+
+    res.json({ data: enriched, total, page, pages: Math.ceil(total / limit) });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch referrals' });
+  }
+});
+
+adminRouter.get('/referral-stats', async (_req, res) => {
+  try {
+    const [
+      totalReferrals,
+      usersWithReferrals,
+      commissionsByLevel,
+      topReferrers,
+      totalCommissionsPaid,
+      totalCommissionsWithdrawn,
+    ] = await Promise.all([
+      ReferralCode.countDocuments({ referred_by: { $ne: null } }),
+      ReferralCode.aggregate([
+        { $match: { referred_by: { $ne: null } } },
+        { $group: { _id: '$referred_by' } },
+        { $count: 'count' },
+      ]),
+      CommissionEarning.aggregate([
+        { $group: { _id: '$level', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      CommissionEarning.aggregate([
+        { $group: { _id: '$wallet_address', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $sort: { total: -1 } },
+        { $limit: 10 },
+      ]),
+      CommissionEarning.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
+      CommissionWithdrawal.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
+    ]);
+
+    res.json({
+      totalReferrals,
+      usersWithReferrals: usersWithReferrals[0]?.count ?? 0,
+      commissionsByLevel: commissionsByLevel.map(l => ({ level: l._id, total: l.total, count: l.count })),
+      topReferrers: topReferrers.map(r => ({ wallet: r._id, totalEarned: r.total, referralCount: r.count })),
+      totalCommissionsPaid: totalCommissionsPaid[0]?.total ?? 0,
+      totalCommissionsWithdrawn: totalCommissionsWithdrawn[0]?.total ?? 0,
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch referral stats' });
+  }
+});
+
+adminRouter.get('/commissions', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = 20;
+    const skip = (page - 1) * limit;
+    const filter: Record<string, unknown> = {};
+
+    if (req.query.wallet) {
+      filter.$or = [
+        { wallet_address: { $regex: req.query.wallet, $options: 'i' } },
+        { from_wallet: { $regex: req.query.wallet, $options: 'i' } },
+      ];
+    }
+    if (req.query.level) {
+      filter.level = parseInt(req.query.level as string);
+    }
+
+    const [docs, total] = await Promise.all([
+      CommissionEarning.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+      CommissionEarning.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: docs.map(d => ({ ...d, id: String(d._id) })),
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch commissions' });
+  }
+});
+
+adminRouter.get('/commission-withdrawals', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = 20;
+    const skip = (page - 1) * limit;
+    const filter: Record<string, unknown> = {};
+
+    if (req.query.wallet) {
+      filter.wallet_address = { $regex: req.query.wallet, $options: 'i' };
+    }
+
+    const [docs, total] = await Promise.all([
+      CommissionWithdrawal.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
+      CommissionWithdrawal.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: docs.map(d => ({ ...d, id: String(d._id) })),
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch commission withdrawals' });
+  }
+});
+
 // ────────────────────── Users ──────────────────────
 
 adminRouter.get('/users', async (req, res) => {

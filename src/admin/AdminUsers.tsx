@@ -116,10 +116,14 @@ export const AdminUsers = () => {
                 <div className="rounded-lg bg-slate-800/40 p-4 space-y-1">
                   <p className="text-xs text-slate-400">Wallet</p>
                   <p className="font-mono text-sm text-slate-100 break-all">{detail.user.wallet_address}</p>
-                  <div className="grid grid-cols-3 gap-4 mt-3">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
+                    <div>
+                      <p className="text-xs text-slate-500">Referral Code</p>
+                      <p className="font-mono text-xs text-emerald-400 font-medium">{detail.user.referral_code}</p>
+                    </div>
                     <div>
                       <p className="text-xs text-slate-500">Referred By</p>
-                      <p className="font-mono text-xs text-slate-300">{detail.user.referred_by || 'None'}</p>
+                      <p className="font-mono text-xs text-slate-300">{detail.user.referred_by ? `${detail.user.referred_by.slice(0, 8)}...${detail.user.referred_by.slice(-4)}` : 'None'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Direct Referrals</p>
@@ -166,13 +170,50 @@ export const AdminUsers = () => {
                   )}
                 </div>
 
+                {detail.commissions.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-300 mb-2">Commission Earnings ({detail.commissions.length})</h4>
+                    <div className="space-y-1">
+                      {detail.commissions.map((c: { id: string; from_wallet: string; amount: number; level: number; created_at: string }) => (
+                        <div key={c.id} className="flex items-center justify-between rounded-lg bg-slate-800/30 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-500/20 text-violet-400">L{c.level}</span>
+                            <span className="font-mono text-xs text-slate-400">from {c.from_wallet.slice(0, 6)}...{c.from_wallet.slice(-4)}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs text-emerald-400">{c.amount.toFixed(4)}</span>
+                            <span className="text-[11px] text-slate-500">{new Date(c.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {detail.rewards.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-300 mb-2">Reward Claims ({detail.rewards.length})</h4>
+                    <div className="space-y-1">
+                      {detail.rewards.map((r: { id: string; amount: number; created_at: string }) => (
+                        <div key={r.id} className="flex items-center justify-between rounded-lg bg-slate-800/30 px-3 py-2">
+                          <span className="font-mono text-xs text-cyan-400">{r.amount.toFixed(4)} RUBIX</span>
+                          <span className="text-[11px] text-slate-500">{new Date(r.created_at).toLocaleDateString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {detail.referrals.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-300 mb-2">Direct Referrals</h4>
+                    <h4 className="text-sm font-semibold text-slate-300 mb-2">Direct Referrals ({detail.referrals.length})</h4>
                     <div className="space-y-1">
                       {detail.referrals.map(r => (
                         <div key={r.wallet_address} className="flex items-center justify-between rounded-lg bg-slate-800/30 px-3 py-2">
-                          <span className="font-mono text-xs text-slate-300">{r.wallet_address.slice(0, 8)}...{r.wallet_address.slice(-4)}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs text-slate-300">{r.wallet_address.slice(0, 8)}...{r.wallet_address.slice(-4)}</span>
+                            {r.referral_code && <span className="text-[10px] text-emerald-500/60">{r.referral_code}</span>}
+                          </div>
                           <span className="text-[11px] text-slate-500">{new Date(r.created_at).toLocaleDateString()}</span>
                         </div>
                       ))}

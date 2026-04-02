@@ -176,8 +176,72 @@ export async function getAdminUserDetail(wallet: string) {
     user: AdminUser;
     stakes: AdminStake[];
     withdrawals: AdminWithdrawal[];
-    commissions: unknown[];
-    rewards: unknown[];
-    referrals: { wallet_address: string; created_at: string }[];
+    commissions: AdminCommission[];
+    rewards: { id: string; amount: number; created_at: string }[];
+    referrals: { wallet_address: string; referral_code: string; created_at: string }[];
   }>(`/users/${wallet}`);
+}
+
+// ── Referrals ──
+
+export interface AdminReferral {
+  id: string;
+  wallet_address: string;
+  referral_code: string;
+  referred_by: string;
+  commission_generated: number;
+  created_at: string;
+}
+
+export async function getAdminReferrals(page = 1, wallet = ''): Promise<Paginated<AdminReferral>> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (wallet) params.set('wallet', wallet);
+  return authFetch<Paginated<AdminReferral>>(`/referrals?${params}`);
+}
+
+export interface ReferralStats {
+  totalReferrals: number;
+  usersWithReferrals: number;
+  commissionsByLevel: { level: number; total: number; count: number }[];
+  topReferrers: { wallet: string; totalEarned: number; referralCount: number }[];
+  totalCommissionsPaid: number;
+  totalCommissionsWithdrawn: number;
+}
+
+export async function getReferralStats(): Promise<ReferralStats> {
+  return authFetch<ReferralStats>('/referral-stats');
+}
+
+// ── Commissions ──
+
+export interface AdminCommission {
+  id: string;
+  wallet_address: string;
+  from_wallet: string;
+  amount: number;
+  level: number;
+  stake_id: string | null;
+  created_at: string;
+}
+
+export async function getAdminCommissions(page = 1, wallet = '', level = ''): Promise<Paginated<AdminCommission>> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (wallet) params.set('wallet', wallet);
+  if (level) params.set('level', level);
+  return authFetch<Paginated<AdminCommission>>(`/commissions?${params}`);
+}
+
+export interface AdminCommissionWithdrawal {
+  id: string;
+  wallet_address: string;
+  amount: number;
+  transaction_signature: string | null;
+  status: string;
+  created_at: string;
+}
+
+export async function getAdminCommissionWithdrawals(page = 1, wallet = ''): Promise<Paginated<AdminCommissionWithdrawal>> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (wallet) params.set('wallet', wallet);
+  return authFetch<Paginated<AdminCommissionWithdrawal>>(`/commission-withdrawals?${params}`);
 }

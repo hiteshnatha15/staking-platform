@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { getStats, getActivity, DashboardStats, ActivityItem } from './adminApi';
+import { getStats, getActivity, getReferralStats, DashboardStats, ActivityItem, ReferralStats } from './adminApi';
 
 export const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [refStats, setRefStats] = useState<ReferralStats | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getStats(), getActivity()])
-      .then(([s, a]) => { setStats(s); setActivity(a); })
+    Promise.all([getStats(), getActivity(), getReferralStats()])
+      .then(([s, a, r]) => { setStats(s); setActivity(a); setRefStats(r); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -29,8 +30,9 @@ export const AdminDashboard = () => {
     { label: 'Active Stakes', value: stats.activeStakes.toLocaleString(), sub: `of ${stats.totalStakes} total`, color: 'cyan' },
     { label: 'Pending Withdrawals', value: stats.pendingWithdrawals.toString(), sub: `${stats.pendingWithdrawalAmount.toFixed(2)} RUBIX`, color: 'amber' },
     { label: '24h New Stakes', value: stats.stakes24h.toString(), sub: 'Last 24 hours', color: 'blue' },
+    { label: 'Total Referrals', value: refStats?.totalReferrals.toString() ?? '0', sub: `${refStats?.usersWithReferrals ?? 0} referrers`, color: 'teal' },
+    { label: 'Commissions Paid', value: (refStats?.totalCommissionsPaid ?? 0).toFixed(2), sub: `${(refStats?.totalCommissionsWithdrawn ?? 0).toFixed(2)} withdrawn`, color: 'orange' },
     { label: 'Rewards Claimed', value: stats.totalRewardsClaimed.toFixed(2), sub: 'RUBIX total', color: 'pink' },
-    { label: 'Total Commissions', value: stats.totalCommissions.toFixed(2), sub: 'RUBIX earned', color: 'orange' },
   ];
 
   const colorClasses: Record<string, { bg: string; text: string }> = {
@@ -41,6 +43,7 @@ export const AdminDashboard = () => {
     blue: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
     pink: { bg: 'bg-pink-500/15', text: 'text-pink-400' },
     orange: { bg: 'bg-orange-500/15', text: 'text-orange-400' },
+    teal: { bg: 'bg-teal-500/15', text: 'text-teal-400' },
   };
 
   return (
