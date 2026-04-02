@@ -42,10 +42,16 @@ async function authFetch<T>(path: string, opts: RequestInit = {}): Promise<T> {
 // ── Auth ──
 
 export async function login(username: string, password: string): Promise<string> {
-  const data = await authFetch<{ token: string }>('/login', {
+  const res = await fetch(`${BASE}/login`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Login failed' }));
+    throw new Error(body.error || 'Invalid credentials');
+  }
+  const data: { token: string } = await res.json();
   setToken(data.token);
   return data.token;
 }
