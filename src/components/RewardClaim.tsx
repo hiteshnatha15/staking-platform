@@ -10,7 +10,7 @@ function calculateRewards(stake: Stake): number {
   const hoursStaked = Math.floor(
     (Date.now() - new Date(stakeStart).getTime()) / (1000 * 60 * 60)
   );
-  const hourlyRate = TOKEN_CONFIG.apr / 100 / 365 / 24;
+  const hourlyRate = TOKEN_CONFIG.dailyRate / 100 / 24;
   return Number(stake.amount) * hourlyRate * hoursStaked;
 }
 

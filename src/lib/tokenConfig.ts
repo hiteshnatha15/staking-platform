@@ -12,8 +12,8 @@ export const TOKEN_CONFIG = {
   symbol: import.meta.env.VITE_TOKEN_SYMBOL || 'NET',
   /** Token decimals (usually 6 or 9) */
   decimals: parseInt(import.meta.env.VITE_TOKEN_DECIMALS || '9', 10),
-  /** APR for staking rewards */
-  apr: 12,
+  /** Daily staking reward rate (%) */
+  dailyRate: 1,
   /** Instant bonus when user stakes: deposited + (deposited * bonus/100) */
   stakingBonusPercent: 30,
 } as const;

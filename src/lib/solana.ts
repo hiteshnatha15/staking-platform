@@ -11,9 +11,10 @@ import { TOKEN_CONFIG } from './tokenConfig';
 
 const LAMPORTS_PER_SOL = 1e9;
 
-// RPC list - free public endpoints. Try in order until one works.
+// RPC list - prefer user-configured RPC, then free public fallbacks.
 const RPC_ENDPOINTS = (() => {
   const network = (import.meta.env.VITE_SOLANA_NETWORK || 'mainnet').toLowerCase();
+  const customRpc = import.meta.env.VITE_SOLANA_RPC || '';
   const devnetRpc = 'https://api.devnet.solana.com';
   const mainnetRpcs = [
     'https://rpc.ankr.com/solana',
@@ -23,7 +24,9 @@ const RPC_ENDPOINTS = (() => {
     'https://solana-mainnet.gateway.tatum.io',
     'https://api.mainnet-beta.solana.com',
   ];
-  return network === 'devnet' ? [devnetRpc] : mainnetRpcs;
+  if (network === 'devnet') return [devnetRpc];
+  const rpcs = customRpc ? [customRpc, ...mainnetRpcs.filter(r => r !== customRpc)] : mainnetRpcs;
+  return rpcs;
 })();
 
 const getConnection = (rpcIndex = 0) => {
@@ -75,30 +78,25 @@ export async function getTokenBalance(
   return 0;
 }
 
-/** Transfer SPL tokens from user to staking vault. Sign ONCE, then try each RPC to send. */
-export async function transferToVault(
+export interface BroadcastResult {
+  signature: string;
+  blockhash: string;
+  lastValidBlockHeight: number;
+}
+
+/** Sign, build, and broadcast the token transfer. Returns immediately after broadcast. */
+export async function broadcastToVault(
   _connection: Connection,
   fromWallet: PublicKey,
   amountRaw: bigint,
   signTransaction: (tx: Transaction) => Promise<Transaction>
-): Promise<string> {
+): Promise<BroadcastResult> {
   const mint = new PublicKey(TOKEN_CONFIG.mintAddress);
   const vaultPubkey = new PublicKey(TOKEN_CONFIG.stakingVault);
 
-  const fromAta = await getAssociatedTokenAddress(
-    mint,
-    fromWallet,
-    false,
-    TOKEN_PROGRAM_ID
-  );
-  const vaultAta = await getAssociatedTokenAddress(
-    mint,
-    vaultPubkey,
-    false,
-    TOKEN_PROGRAM_ID
-  );
+  const fromAta = await getAssociatedTokenAddress(mint, fromWallet, false, TOKEN_PROGRAM_ID);
+  const vaultAta = await getAssociatedTokenAddress(mint, vaultPubkey, false, TOKEN_PROGRAM_ID);
 
-  // Step 1: Find first working RPC for blockhash + vault check
   let conn: Connection | null = null;
   for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
     try {
@@ -112,43 +110,26 @@ export async function transferToVault(
   }
   if (!conn) throw new Error('All RPCs failed. Try again later or use a different network.');
 
-  // Step 2: Build transaction (check vault ATA once)
   const transaction = new Transaction();
   try {
     await getAccount(conn, vaultAta);
   } catch {
     transaction.add(
-      createAssociatedTokenAccountInstruction(
-        fromWallet,
-        vaultAta,
-        vaultPubkey,
-        mint
-      )
+      createAssociatedTokenAccountInstruction(fromWallet, vaultAta, vaultPubkey, mint)
     );
   }
   transaction.add(
-    createTransferInstruction(
-      fromAta,
-      vaultAta,
-      fromWallet,
-      amountRaw,
-      [],
-      TOKEN_PROGRAM_ID
-    )
+    createTransferInstruction(fromAta, vaultAta, fromWallet, amountRaw, [], TOKEN_PROGRAM_ID)
   );
 
-  // Step 3: Get blockhash and set on tx (need lastValidBlockHeight for confirmation)
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = fromWallet;
 
-  // Step 4: Sign ONCE - user sees popup only 1 time
   const signed = await signTransaction(transaction);
   const serialized = signed.serialize();
 
-  // Step 5: Try each RPC to send - no more signing
   let signature: string | null = null;
-  let successConn: Connection | null = null;
   for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
     try {
       const c = getConnection(i);
@@ -156,58 +137,81 @@ export async function transferToVault(
         skipPreflight: true,
         maxRetries: 3,
       });
-      successConn = c;
       break;
     } catch {
       continue;
     }
   }
-  if (!signature || !successConn) {
+  if (!signature) {
     throw new Error('Transaction signed but failed to broadcast. Try again later.');
   }
 
-  // Step 6: CRITICAL - Wait for on-chain confirmation BEFORE returning.
-  // If we return before confirmation, StakingInterface would insert into Supabase
-  // even when tx fails on-chain = system loss (user gets balance without actual stake).
-  const confirmed = await waitForConfirmation(
-    successConn,
-    signature,
-    lastValidBlockHeight
-  );
-  if (!confirmed) {
-    throw new Error('Transaction was not confirmed on-chain. Please try again.');
-  }
-  return signature;
+  return { signature, blockhash, lastValidBlockHeight };
 }
 
-/** Wait for tx to be confirmed or to fail/expire. Returns true only if confirmed. */
+/** Wait for on-chain confirmation. Tries multiple RPCs for resilience. */
+export async function confirmVaultTransfer(
+  result: BroadcastResult
+): Promise<boolean> {
+  const { signature, blockhash, lastValidBlockHeight } = result;
+  return waitForConfirmation(signature, blockhash, lastValidBlockHeight);
+}
+
+/**
+ * Wait for tx to be confirmed or to fail/expire. Tries multiple RPCs for
+ * resilience. Uses confirmTransaction first (built-in retry logic), then
+ * falls back to manual polling if the primary RPC fails.
+ */
 async function waitForConfirmation(
-  conn: Connection,
   signature: string,
+  blockhash: string,
   lastValidBlockHeight: number
 ): Promise<boolean> {
-  const timeout = 90_000; // 90 seconds max
+  // Try confirmTransaction on each RPC (most reliable built-in method)
+  for (let i = 0; i < Math.min(RPC_ENDPOINTS.length, 3); i++) {
+    try {
+      const conn = getConnection(i);
+      const result = await conn.confirmTransaction(
+        { signature, blockhash, lastValidBlockHeight },
+        'confirmed'
+      );
+      if (!result.value.err) return true;
+      return false;
+    } catch {
+      // This RPC failed, try next
+    }
+  }
+
+  // Fallback: manual polling across RPCs
+  const timeout = 60_000;
   const start = Date.now();
 
   while (Date.now() - start < timeout) {
-    try {
-      const status = await conn.getSignatureStatus(signature);
-      if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') {
-        return true;
+    for (let i = 0; i < Math.min(RPC_ENDPOINTS.length, 3); i++) {
+      try {
+        const conn = getConnection(i);
+        const resp = await conn.getSignatureStatuses([signature]);
+        const status = resp?.value?.[0];
+        if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') {
+          return true;
+        }
+        if (status?.err) {
+          return false;
+        }
+      } catch {
+        continue;
       }
-      if (status?.err) {
-        return false; // Tx failed on-chain
-      }
-      const height = await conn.getBlockHeight();
-      if (height > lastValidBlockHeight) {
-        return false; // Blockhash expired, tx will never confirm
-      }
-    } catch {
-      // RPC issue, keep polling
     }
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const conn = getConnection(0);
+      const height = await conn.getBlockHeight();
+      if (height > lastValidBlockHeight) return false;
+    } catch {
+      // ignore
+    }
+    await new Promise((r) => setTimeout(r, 2000));
   }
-  return false; // Timeout
+  return false;
 }
 
 /** Convert human amount to raw (with decimals) */

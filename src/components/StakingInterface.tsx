@@ -8,7 +8,8 @@ import {
   getConnection,
   getSolBalance,
   getTokenBalance,
-  transferToVault,
+  broadcastToVault,
+  confirmVaultTransfer,
   toRawAmount,
 } from '../lib/solana';
 
@@ -59,7 +60,7 @@ export const StakingInterface = () => {
       .from('stakes')
       .select('*')
       .eq('wallet_address', publicKey.toString())
-      .eq('status', 'active')
+      .in('status', ['active', 'pending'])
       .order('created_at', { ascending: false });
 
     const { data: withdrawalData } = await supabase
@@ -103,29 +104,35 @@ export const StakingInterface = () => {
 
     setIsStaking(true);
     try {
+      const effectiveAmount = amountNum * (1 + TOKEN_CONFIG.stakingBonusPercent / 100);
+
       if (isTokenConfigured() && signTransaction) {
         const conn = getConnection();
         const amountRaw = toRawAmount(amountNum);
-        const txSignature = await transferToVault(
-          conn,
-          publicKey,
-          amountRaw,
-          signTransaction
-        );
 
-        const effectiveAmount = amountNum * (1 + TOKEN_CONFIG.stakingBonusPercent / 100);
+        // Phase 1: Sign & broadcast (user approves in wallet)
+        const broadcastResult = await broadcastToVault(conn, publicKey, amountRaw, signTransaction);
+
+        // Phase 2: Record immediately as "pending" so tokens are never lost
         const { error: insertError } = await supabase.from('stakes').insert({
           wallet_address: publicKey.toString(),
           amount: effectiveAmount,
           deposited_amount: amountNum,
-          transaction_signature: txSignature,
-          status: 'active',
+          transaction_signature: broadcastResult.signature,
+          status: 'pending',
         });
-
         if (insertError) throw insertError;
+
+        // Phase 3: Wait for on-chain confirmation, then upgrade to active
+        const confirmed = await confirmVaultTransfer(broadcastResult);
+        if (confirmed) {
+          await supabase.from('stakes')
+            .update({ status: 'active' })
+            .eq('transaction_signature', broadcastResult.signature);
+        }
+        // If not confirmed, stake stays as 'pending' for manual reconciliation
       } else {
         const txSignature = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const effectiveAmount = amountNum * (1 + TOKEN_CONFIG.stakingBonusPercent / 100);
         const { error: insertError } = await supabase.from('stakes').insert({
           wallet_address: publicKey.toString(),
           amount: effectiveAmount,
@@ -158,7 +165,7 @@ export const StakingInterface = () => {
     const hoursStaked = Math.floor(
       (Date.now() - new Date(stakeStart).getTime()) / (1000 * 60 * 60)
     );
-    const hourlyRate = TOKEN_CONFIG.apr / 100 / 365 / 24;
+    const hourlyRate = TOKEN_CONFIG.dailyRate / 100 / 24;
     return (Number(stake.amount) * hourlyRate * hoursStaked).toFixed(4);
   };
 
@@ -172,7 +179,7 @@ export const StakingInterface = () => {
         </div>
         <h2 className="text-xl sm:text-3xl font-bold text-slate-100 mb-2 sm:mb-3">Connect Your Wallet</h2>
         <p className="text-slate-400 text-sm sm:text-lg max-w-md mx-auto">
-          Connect your Solana wallet to stake {symbol} and earn {TOKEN_CONFIG.apr}% APR
+          Connect your Solana wallet to stake {symbol} and earn {TOKEN_CONFIG.dailyRate}% Daily
         </p>
       </div>
     );
@@ -255,7 +262,7 @@ export const StakingInterface = () => {
       <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-8">
         <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-1">Stake {symbol}</h3>
         <p className="text-slate-400 text-xs sm:text-sm mb-1">
-          Lock {symbol} to earn {TOKEN_CONFIG.apr}% APR rewards
+          Lock {symbol} to earn {TOKEN_CONFIG.dailyRate}% Daily rewards
         </p>
         <p className="text-emerald-400 text-[11px] sm:text-xs font-medium mb-4 sm:mb-5">
           +{TOKEN_CONFIG.stakingBonusPercent}% instant bonus: stake 100 = get {(100 * (1 + TOKEN_CONFIG.stakingBonusPercent / 100)).toFixed(0)} {symbol}
@@ -365,10 +372,17 @@ export const StakingInterface = () => {
                       </p>
                     </div>
                     <div className="flex items-center justify-start sm:justify-end col-span-2 sm:col-span-1">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                        <span className="text-emerald-400 text-[11px] sm:text-xs font-semibold">Active</span>
-                      </div>
+                      {stake.status === 'pending' ? (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                          <span className="text-amber-400 text-[11px] sm:text-xs font-semibold">Confirming</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                          <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                          <span className="text-emerald-400 text-[11px] sm:text-xs font-semibold">Active</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

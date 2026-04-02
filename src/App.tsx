@@ -139,9 +139,9 @@ function App() {
       tab: 'stake',
     },
     {
-      label: 'APR',
-      value: `${TOKEN_CONFIG.apr}%`,
-      sub: 'Annual Yield',
+      label: 'Daily Reward',
+      value: `${TOKEN_CONFIG.dailyRate}%`,
+      sub: 'Daily Yield',
       icon: ChartTrendingUp,
       color: 'cyan',
       glow: 'group-hover:shadow-cyan-500/20',
