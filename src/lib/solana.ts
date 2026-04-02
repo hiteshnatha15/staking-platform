@@ -172,26 +172,11 @@ export async function confirmVaultTransfer(
  */
 async function waitForConfirmation(
   signature: string,
-  blockhash: string,
+  _blockhash: string,
   lastValidBlockHeight: number
 ): Promise<boolean> {
-  // Try confirmTransaction on each RPC (most reliable built-in method)
-  for (let i = 0; i < Math.min(RPC_ENDPOINTS.length, 3); i++) {
-    try {
-      const conn = getConnection(i);
-      const result = await conn.confirmTransaction(
-        { signature, blockhash, lastValidBlockHeight },
-        'confirmed'
-      );
-      if (!result.value.err) return true;
-      return false;
-    } catch {
-      // This RPC failed, try next
-    }
-  }
-
-  // Fallback: manual polling across RPCs
-  const timeout = 60_000;
+  // Manual polling with short timeout — runs in the background so be quick
+  const timeout = 30_000;
   const start = Date.now();
 
   while (Date.now() - start < timeout) {
@@ -217,7 +202,7 @@ async function waitForConfirmation(
     } catch {
       // ignore
     }
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 3000));
   }
   return false;
 }

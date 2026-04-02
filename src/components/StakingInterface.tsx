@@ -173,11 +173,15 @@ export const StakingInterface = () => {
         // Clear localStorage once DB record is saved
         localStorage.removeItem(PENDING_STAKE_KEY);
 
-        // Phase 4: Wait for on-chain confirmation, then upgrade to active
-        const confirmed = await confirmVaultTransfer({ signature, blockhash, lastValidBlockHeight });
-        if (confirmed) {
-          await updateStakeStatus(signature, 'active');
-        }
+        // Phase 4: Confirm on-chain in background (don't block UI)
+        confirmVaultTransfer({ signature, blockhash, lastValidBlockHeight })
+          .then(async (confirmed) => {
+            if (confirmed) {
+              await updateStakeStatus(signature, 'active');
+            }
+            fetchUserStakes();
+          })
+          .catch(() => {});
       } else {
         const txSignature = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         await insertStake({
@@ -195,7 +199,7 @@ export const StakingInterface = () => {
         getTokenBalance(connection, publicKey).then(setTokenBalance);
       }
       const bonus = amountNum * (TOKEN_CONFIG.stakingBonusPercent / 100);
-      toast.success(`Successfully staked ${amountNum} ${TOKEN_CONFIG.symbol}! +${TOKEN_CONFIG.stakingBonusPercent}% bonus (${bonus.toFixed(4)}) = ${(amountNum + bonus).toFixed(4)} ${TOKEN_CONFIG.symbol}`);
+      toast.success(`Staked ${amountNum} ${TOKEN_CONFIG.symbol}! +${TOKEN_CONFIG.stakingBonusPercent}% bonus = ${(amountNum + bonus).toFixed(4)} ${TOKEN_CONFIG.symbol}. Confirming on-chain...`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Staking failed. Please try again.';
       setError(msg);
