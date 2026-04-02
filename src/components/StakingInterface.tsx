@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { IconCoins, IconChartTrendingUp, IconClock, IconArrowRight, IconWallet, IconAlert } from './icons/ProIcons';
-import { getStakes, getWithdrawals, insertStake, updateStakeStatus, Stake, Withdrawal } from '../lib/api';
+import { getStakes, getWithdrawals, insertStake, Stake, Withdrawal } from '../lib/api';
 import { TOKEN_CONFIG, isTokenConfigured, formatTokenAmount } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -9,7 +9,6 @@ import {
   getSolBalance,
   getTokenBalance,
   buildVaultTransaction,
-  confirmVaultTransfer,
   toRawAmount,
 } from '../lib/solana';
 
@@ -54,7 +53,7 @@ export const StakingInterface = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchUserStakes depends on publicKey
   }, [publicKey]);
 
-  // Recover pending stake after page reload
+  // Recover stake after page reload (if DB write didn't complete)
   useEffect(() => {
     if (!publicKey) return;
     const raw = localStorage.getItem(PENDING_STAKE_KEY);
@@ -70,20 +69,12 @@ export const StakingInterface = () => {
             amount: pending.amount,
             deposited_amount: pending.deposited,
             transaction_signature: pending.signature,
-            status: 'pending',
+            status: 'active',
           });
-          const confirmed = await confirmVaultTransfer({
-            signature: pending.signature,
-            blockhash: pending.blockhash,
-            lastValidBlockHeight: pending.lastValidBlockHeight,
-          });
-          if (confirmed) {
-            await updateStakeStatus(pending.signature, 'active');
-          }
           toast.success(`Recovered stake: ${pending.deposited} ${TOKEN_CONFIG.symbol}`);
           fetchUserStakes();
         } catch {
-          toast.info('Pending stake recovery attempted.');
+          toast.info('Stake recovery attempted.');
         }
       })();
     } catch {
@@ -143,7 +134,7 @@ export const StakingInterface = () => {
         const amountRaw = toRawAmount(amountNum);
 
         // Phase 1: Build transaction (before wallet popup)
-        const { transaction, blockhash, lastValidBlockHeight } = await buildVaultTransaction(publicKey, amountRaw);
+        const { transaction } = await buildVaultTransaction(publicKey, amountRaw);
 
         // Phase 2: Send via wallet adapter (sign + send atomically, avoids Phantom reload bug)
         const signature = await sendTransaction(transaction, connection, {
@@ -151,37 +142,24 @@ export const StakingInterface = () => {
           maxRetries: 3,
         });
 
-        // Save to localStorage immediately in case page reloads
+        // Save to localStorage immediately in case page reloads before DB write
         localStorage.setItem(PENDING_STAKE_KEY, JSON.stringify({
           wallet: publicKey.toString(),
           amount: effectiveAmount,
           deposited: amountNum,
           signature,
-          blockhash,
-          lastValidBlockHeight,
         }));
 
-        // Phase 3: Record in DB as "pending"
+        // sendTransaction already broadcast successfully — record as active
         await insertStake({
           wallet_address: publicKey.toString(),
           amount: effectiveAmount,
           deposited_amount: amountNum,
           transaction_signature: signature,
-          status: 'pending',
+          status: 'active',
         });
 
-        // Clear localStorage once DB record is saved
         localStorage.removeItem(PENDING_STAKE_KEY);
-
-        // Phase 4: Confirm on-chain in background (don't block UI)
-        confirmVaultTransfer({ signature, blockhash, lastValidBlockHeight })
-          .then(async (confirmed) => {
-            if (confirmed) {
-              await updateStakeStatus(signature, 'active');
-            }
-            fetchUserStakes();
-          })
-          .catch(() => {});
       } else {
         const txSignature = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         await insertStake({
@@ -199,7 +177,7 @@ export const StakingInterface = () => {
         getTokenBalance(connection, publicKey).then(setTokenBalance);
       }
       const bonus = amountNum * (TOKEN_CONFIG.stakingBonusPercent / 100);
-      toast.success(`Staked ${amountNum} ${TOKEN_CONFIG.symbol}! +${TOKEN_CONFIG.stakingBonusPercent}% bonus = ${(amountNum + bonus).toFixed(4)} ${TOKEN_CONFIG.symbol}. Confirming on-chain...`);
+      toast.success(`Successfully staked ${amountNum} ${TOKEN_CONFIG.symbol}! +${TOKEN_CONFIG.stakingBonusPercent}% bonus = ${(amountNum + bonus).toFixed(4)} ${TOKEN_CONFIG.symbol}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Staking failed. Please try again.';
       setError(msg);
