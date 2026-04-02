@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="gem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e53935"/>
+      <stop offset="50%" stop-color="#c62828"/>
+      <stop offset="100%" stop-color="#b71c1c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd700"/>
+      <stop offset="50%" stop-color="#daa520"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+  </defs>
+  <polygon points="60,8 95,35 95,85 60,110 25,85 25,35" fill="url(#gem)" stroke="#fff" stroke-width="2" opacity="0.9"/>
+  <circle cx="52" cy="42" r="4" fill="#fff"/>
+  <circle cx="68" cy="42" r="4" fill="#fff"/>
+  <path d="M45 55 Q60 70 75 55" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <text x="60" y="90" font-family="Arial Black, sans-serif" font-size="28" font-weight="bold" fill="url(#gold)" text-anchor="middle">RX</text>
+  <path d="M55 5 L65 5 L70 12 L60 15 Z" fill="url(#gold)" stroke="#b8860b" stroke-width="1"/>
+  <path d="M50 5 L60 5 L65 12 L55 15 Z" fill="url(#gold)" stroke="#b8860b" stroke-width="1"/>
+  <path d="M65 5 L75 5 L80 12 L70 15 Z" fill="url(#gold)" stroke="#b8860b" stroke-width="1"/>
+</svg>
