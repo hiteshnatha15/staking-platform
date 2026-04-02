@@ -82,13 +82,11 @@ export interface BroadcastResult {
   lastValidBlockHeight: number;
 }
 
-/** Sign, build, and broadcast the token transfer. Returns immediately after broadcast. */
-export async function broadcastToVault(
-  _connection: Connection,
+/** Build the token transfer transaction (does NOT sign or send). */
+export async function buildVaultTransaction(
   fromWallet: PublicKey,
   amountRaw: bigint,
-  signTransaction: (tx: Transaction) => Promise<Transaction>
-): Promise<BroadcastResult> {
+): Promise<{ transaction: Transaction; blockhash: string; lastValidBlockHeight: number }> {
   const mint = new PublicKey(TOKEN_CONFIG.mintAddress);
   const vaultPubkey = new PublicKey(TOKEN_CONFIG.stakingVault);
 
@@ -123,6 +121,18 @@ export async function broadcastToVault(
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = fromWallet;
+
+  return { transaction, blockhash, lastValidBlockHeight };
+}
+
+/** Sign, build, and broadcast the token transfer. Returns immediately after broadcast. */
+export async function broadcastToVault(
+  _connection: Connection,
+  fromWallet: PublicKey,
+  amountRaw: bigint,
+  signTransaction: (tx: Transaction) => Promise<Transaction>
+): Promise<BroadcastResult> {
+  const { transaction, blockhash, lastValidBlockHeight } = await buildVaultTransaction(fromWallet, amountRaw);
 
   const signed = await signTransaction(transaction);
   const serialized = signed.serialize();

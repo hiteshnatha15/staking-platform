@@ -8,7 +8,7 @@ import {
   getConnection,
   getSolBalance,
   getTokenBalance,
-  broadcastToVault,
+  buildVaultTransaction,
   confirmVaultTransfer,
   toRawAmount,
 } from '../lib/solana';
@@ -22,8 +22,10 @@ function calcTotalReleased(principal: number, stakeDate: string): number {
   return principal * (1 - Math.pow(1 - DAILY_RELEASE_RATE, daysElapsed));
 }
 
+const PENDING_STAKE_KEY = 'rubix_pending_stake';
+
 export const StakingInterface = () => {
-  const { publicKey, signTransaction } = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
   const toast = useToast();
   const [amount, setAmount] = useState('');
@@ -50,6 +52,44 @@ export const StakingInterface = () => {
       return () => clearInterval(interval);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchUserStakes depends on publicKey
+  }, [publicKey]);
+
+  // Recover pending stake after page reload
+  useEffect(() => {
+    if (!publicKey) return;
+    const raw = localStorage.getItem(PENDING_STAKE_KEY);
+    if (!raw) return;
+    try {
+      const pending = JSON.parse(raw);
+      if (pending.wallet !== publicKey.toString()) return;
+      localStorage.removeItem(PENDING_STAKE_KEY);
+      (async () => {
+        try {
+          await insertStake({
+            wallet_address: pending.wallet,
+            amount: pending.amount,
+            deposited_amount: pending.deposited,
+            transaction_signature: pending.signature,
+            status: 'pending',
+          });
+          const confirmed = await confirmVaultTransfer({
+            signature: pending.signature,
+            blockhash: pending.blockhash,
+            lastValidBlockHeight: pending.lastValidBlockHeight,
+          });
+          if (confirmed) {
+            await updateStakeStatus(pending.signature, 'active');
+          }
+          toast.success(`Recovered stake: ${pending.deposited} ${TOKEN_CONFIG.symbol}`);
+          fetchUserStakes();
+        } catch {
+          toast.info('Pending stake recovery attempted.');
+        }
+      })();
+    } catch {
+      localStorage.removeItem(PENDING_STAKE_KEY);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicKey]);
 
   const fetchUserStakes = async () => {
@@ -99,28 +139,45 @@ export const StakingInterface = () => {
     try {
       const effectiveAmount = amountNum * (1 + TOKEN_CONFIG.stakingBonusPercent / 100);
 
-      if (isTokenConfigured() && signTransaction) {
-        const conn = getConnection();
+      if (isTokenConfigured() && sendTransaction) {
         const amountRaw = toRawAmount(amountNum);
 
-        // Phase 1: Sign & broadcast (user approves in wallet)
-        const broadcastResult = await broadcastToVault(conn, publicKey, amountRaw, signTransaction);
+        // Phase 1: Build transaction (before wallet popup)
+        const { transaction, blockhash, lastValidBlockHeight } = await buildVaultTransaction(publicKey, amountRaw);
 
-        // Phase 2: Record immediately as "pending" so tokens are never lost
+        // Phase 2: Send via wallet adapter (sign + send atomically, avoids Phantom reload bug)
+        const signature = await sendTransaction(transaction, connection, {
+          skipPreflight: true,
+          maxRetries: 3,
+        });
+
+        // Save to localStorage immediately in case page reloads
+        localStorage.setItem(PENDING_STAKE_KEY, JSON.stringify({
+          wallet: publicKey.toString(),
+          amount: effectiveAmount,
+          deposited: amountNum,
+          signature,
+          blockhash,
+          lastValidBlockHeight,
+        }));
+
+        // Phase 3: Record in DB as "pending"
         await insertStake({
           wallet_address: publicKey.toString(),
           amount: effectiveAmount,
           deposited_amount: amountNum,
-          transaction_signature: broadcastResult.signature,
+          transaction_signature: signature,
           status: 'pending',
         });
 
-        // Phase 3: Wait for on-chain confirmation, then upgrade to active
-        const confirmed = await confirmVaultTransfer(broadcastResult);
+        // Clear localStorage once DB record is saved
+        localStorage.removeItem(PENDING_STAKE_KEY);
+
+        // Phase 4: Wait for on-chain confirmation, then upgrade to active
+        const confirmed = await confirmVaultTransfer({ signature, blockhash, lastValidBlockHeight });
         if (confirmed) {
-          await updateStakeStatus(broadcastResult.signature, 'active');
+          await updateStakeStatus(signature, 'active');
         }
-        // If not confirmed, stake stays as 'pending' for manual reconciliation
       } else {
         const txSignature = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         await insertStake({
