@@ -8,18 +8,9 @@ import {
   IconWallet,
   IconGift,
 } from './icons/ProIcons';
-import { supabase } from '../lib/supabase';
+import { getTransactionHistory, TxItem } from '../lib/api';
 import { TOKEN_CONFIG, formatTokenAmount } from '../lib/tokenConfig';
 import { getExplorerTxUrl } from '../lib/explorer';
-
-interface TxItem {
-  id: string;
-  type: 'stake' | 'withdrawal' | 'commission' | 'reward';
-  amount: number;
-  status?: string;
-  transaction_signature: string | null;
-  created_at: string;
-}
 
 export const TransactionHistory = () => {
   const { publicKey } = useWallet();
@@ -31,87 +22,12 @@ export const TransactionHistory = () => {
 
     const fetchHistory = async () => {
       setLoading(true);
-      const wallet = publicKey.toString();
-
-      const [stakesRes, withdrawalsRes, commissionsRes, rewardRes] = await Promise.all([
-        supabase
-          .from('stakes')
-          .select('id, amount, status, transaction_signature, created_at')
-          .eq('wallet_address', wallet)
-          .order('created_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('withdrawals')
-          .select('id, amount, status, transaction_signature, created_at')
-          .eq('wallet_address', wallet)
-          .order('created_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('commission_withdrawals')
-          .select('id, amount, transaction_signature, created_at')
-          .eq('wallet_address', wallet)
-          .order('created_at', { ascending: false })
-          .limit(50)
-          .then((r) => r)
-          .catch(() => ({ data: [], error: null })),
-        supabase
-          .from('reward_claims')
-          .select('id, amount, transaction_signature, created_at')
-          .eq('wallet_address', wallet)
-          .order('created_at', { ascending: false })
-          .limit(50)
-          .then((r) => r)
-          .catch(() => ({ data: [], error: null })),
-      ]);
-
-      const combined: TxItem[] = [];
-
-      stakesRes.data?.forEach((s) => {
-        combined.push({
-          id: `stake-${s.id}`,
-          type: 'stake',
-          amount: Number(s.amount),
-          status: s.status,
-          transaction_signature: s.transaction_signature,
-          created_at: s.created_at,
-        });
-      });
-
-      withdrawalsRes.data?.forEach((w) => {
-        combined.push({
-          id: `withdraw-${w.id}`,
-          type: 'withdrawal',
-          amount: Number(w.amount),
-          status: w.status,
-          transaction_signature: w.transaction_signature,
-          created_at: w.created_at,
-        });
-      });
-
-      commissionsRes.data?.forEach((c) => {
-        combined.push({
-          id: `commission-${c.id}`,
-          type: 'commission',
-          amount: Number(c.amount),
-          transaction_signature: c.transaction_signature,
-          created_at: c.created_at,
-        });
-      });
-
-      rewardRes.data?.forEach((r) => {
-        combined.push({
-          id: `reward-${r.id}`,
-          type: 'reward',
-          amount: Number(r.amount),
-          transaction_signature: r.transaction_signature,
-          created_at: r.created_at,
-        });
-      });
-
-      combined.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      setItems(combined.slice(0, 30));
+      try {
+        const combined = await getTransactionHistory(publicKey.toString());
+        setItems(combined);
+      } catch (err) {
+        console.error('Failed to fetch history:', err);
+      }
       setLoading(false);
     };
 

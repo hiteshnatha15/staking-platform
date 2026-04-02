@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { IconLink, IconCopy, IconCheck, IconShare, IconWallet } from './icons/ProIcons';
-import { supabase } from '../lib/supabase';
 import { TOKEN_CONFIG } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
 

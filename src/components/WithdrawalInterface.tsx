@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { IconArrowDownCircle, IconClock, IconCheckCircle, IconXCircle, IconAlert, IconWallet } from './icons/ProIcons';
-import { supabase, Stake, Withdrawal } from '../lib/supabase';
+import { getActiveStakes, getWithdrawals, insertWithdrawal, Stake, Withdrawal } from '../lib/api';
 import { TOKEN_CONFIG, formatTokenAmount } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
 
@@ -42,22 +42,17 @@ export const WithdrawalInterface = () => {
 
   const fetchUserData = async () => {
     if (!publicKey) return;
-
-    const { data: stakes } = await supabase
-      .from('stakes')
-      .select('*')
-      .eq('wallet_address', publicKey.toString())
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
-
-    const { data: withdrawalData } = await supabase
-      .from('withdrawals')
-      .select('*')
-      .eq('wallet_address', publicKey.toString())
-      .order('created_at', { ascending: false });
-
-    if (stakes) setUserStakes(stakes);
-    if (withdrawalData) setWithdrawals(withdrawalData);
+    try {
+      const wallet = publicKey.toString();
+      const [stakes, withdrawalData] = await Promise.all([
+        getActiveStakes(wallet),
+        getWithdrawals(wallet),
+      ]);
+      setUserStakes(stakes);
+      setWithdrawals(withdrawalData);
+    } catch (err) {
+      console.error('Failed to fetch user data:', err);
+    }
   };
 
   const withdrawnByStake = useMemo(() => {
@@ -103,7 +98,7 @@ export const WithdrawalInterface = () => {
 
     setIsWithdrawing(true);
     try {
-      const { error } = await supabase.from('withdrawals').insert({
+      await insertWithdrawal({
         stake_id: stakeId,
         wallet_address: publicKey.toString(),
         amount: finalAmount,
@@ -114,9 +109,9 @@ export const WithdrawalInterface = () => {
           : null,
       });
 
-      if (!error && isAuto) {
+      if (isAuto) {
         toast.success(`${finalAmount.toFixed(4)} ${symbol} withdrawn successfully!`);
-      } else if (!error && !isAuto) {
+      } else {
         toast.info('Withdrawal request submitted. Waiting for approval.');
       }
 

@@ -9,7 +9,7 @@ import {
   IconArrowDownCircle,
   IconChartTrendingUp,
 } from './icons/ProIcons';
-import { supabase } from '../lib/supabase';
+import { getCommissionEarnings, getCommissionWithdrawals, insertCommissionWithdrawal } from '../lib/api';
 import { TOKEN_CONFIG, formatTokenAmount } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
 
@@ -51,17 +51,14 @@ export const LevelIncome = () => {
     if (!publicKey) return;
 
     const fetchEarnings = async () => {
-      const { data } = await supabase
-        .from('commission_earnings')
-        .select('level, amount, created_at')
-        .eq('wallet_address', publicKey.toString());
+      const data = await getCommissionEarnings(publicKey.toString());
 
       let total = 0;
       let released = 0;
       const byLevel: Record<number, number> = {};
       REFERRAL_LEVELS.forEach((l) => (byLevel[l.level] = 0));
 
-      (data as EarningRecord[] | null)?.forEach((e) => {
+      (data as EarningRecord[]).forEach((e) => {
         const amt = Number(e.amount);
         total += amt;
         released += calcReleasedForEarning(amt, e.created_at);
@@ -77,11 +74,8 @@ export const LevelIncome = () => {
 
     const fetchWithdrawn = async () => {
       try {
-        const { data } = await supabase
-          .from('commission_withdrawals')
-          .select('amount')
-          .eq('wallet_address', publicKey.toString());
-        const sum = data?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
+        const data = await getCommissionWithdrawals(publicKey.toString());
+        const sum = data.reduce((s, r) => s + Number(r.amount), 0);
         setTotalWithdrawn(sum);
       } catch {
         setTotalWithdrawn(0);
@@ -109,12 +103,11 @@ export const LevelIncome = () => {
 
     setIsWithdrawing(true);
     try {
-      const { error } = await supabase.from('commission_withdrawals').insert({
+      await insertCommissionWithdrawal({
         wallet_address: publicKey.toString(),
         amount: finalAmount,
         transaction_signature: `comm_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       });
-      if (error) throw error;
       toast.success(`${finalAmount.toFixed(4)} ${TOKEN_CONFIG.symbol} commission withdrawn!`);
       setTotalWithdrawn((w) => w + finalAmount);
       setWithdrawAmount('');

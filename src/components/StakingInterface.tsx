@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { IconCoins, IconChartTrendingUp, IconClock, IconArrowRight, IconWallet, IconAlert } from './icons/ProIcons';
-import { supabase, Stake, Withdrawal } from '../lib/supabase';
+import { getStakes, getWithdrawals, insertStake, updateStakeStatus, Stake, Withdrawal } from '../lib/api';
 import { TOKEN_CONFIG, isTokenConfigured, formatTokenAmount } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -25,7 +25,6 @@ function calcTotalReleased(principal: number, stakeDate: string): number {
 export const StakingInterface = () => {
   const { publicKey, signTransaction } = useWallet();
   const { connection } = useConnection();
-  const conn = getConnection();
   const toast = useToast();
   const [amount, setAmount] = useState('');
   const [isStaking, setIsStaking] = useState(false);
@@ -55,30 +54,23 @@ export const StakingInterface = () => {
 
   const fetchUserStakes = async () => {
     if (!publicKey) return;
-
-    const { data, error } = await supabase
-      .from('stakes')
-      .select('*')
-      .eq('wallet_address', publicKey.toString())
-      .in('status', ['active', 'pending'])
-      .order('created_at', { ascending: false });
-
-    const { data: withdrawalData } = await supabase
-      .from('withdrawals')
-      .select('*')
-      .eq('wallet_address', publicKey.toString());
-
-    if (withdrawalData) setWithdrawals(withdrawalData);
-
-    if (!error && data) {
+    try {
+      const wallet = publicKey.toString();
+      const [data, withdrawalData] = await Promise.all([
+        getStakes(wallet, 'active,pending'),
+        getWithdrawals(wallet),
+      ]);
+      setWithdrawals(withdrawalData);
       setUserStakes(data);
-      const total = data.reduce((sum, stake) => sum + Number(stake.amount), 0);
+      const total = data.reduce((sum: number, stake: Stake) => sum + Number(stake.amount), 0);
       const rewards = data.reduce(
-        (sum, stake) => sum + Number(calculateRewards(stake)),
+        (sum: number, stake: Stake) => sum + Number(calculateRewards(stake)),
         0
       );
       setTotalStaked(total);
       setTotalRewards(rewards);
+    } catch (err) {
+      console.error('Failed to fetch stakes:', err);
     }
   };
 
@@ -114,33 +106,29 @@ export const StakingInterface = () => {
         const broadcastResult = await broadcastToVault(conn, publicKey, amountRaw, signTransaction);
 
         // Phase 2: Record immediately as "pending" so tokens are never lost
-        const { error: insertError } = await supabase.from('stakes').insert({
+        await insertStake({
           wallet_address: publicKey.toString(),
           amount: effectiveAmount,
           deposited_amount: amountNum,
           transaction_signature: broadcastResult.signature,
           status: 'pending',
         });
-        if (insertError) throw insertError;
 
         // Phase 3: Wait for on-chain confirmation, then upgrade to active
         const confirmed = await confirmVaultTransfer(broadcastResult);
         if (confirmed) {
-          await supabase.from('stakes')
-            .update({ status: 'active' })
-            .eq('transaction_signature', broadcastResult.signature);
+          await updateStakeStatus(broadcastResult.signature, 'active');
         }
         // If not confirmed, stake stays as 'pending' for manual reconciliation
       } else {
         const txSignature = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const { error: insertError } = await supabase.from('stakes').insert({
+        await insertStake({
           wallet_address: publicKey.toString(),
           amount: effectiveAmount,
           deposited_amount: amountNum,
           transaction_signature: txSignature,
           status: 'active',
         });
-        if (insertError) throw insertError;
       }
 
       setAmount('');

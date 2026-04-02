@@ -8,7 +8,7 @@ import {
   IconCrown,
   IconTrophy,
 } from './icons/ProIcons';
-import { supabase } from '../lib/supabase';
+import { getReferrals, getReferralCountBy, getStakeAmounts } from '../lib/api';
 import { TOKEN_CONFIG, formatTokenAmount } from '../lib/tokenConfig';
 
 interface TeamStats {
@@ -33,35 +33,23 @@ export const TeamDashboard = () => {
     const fetchTeam = async () => {
       const wallet = publicKey.toString();
 
-      const { data: refs } = await supabase
-        .from('referral_codes')
-        .select('wallet_address, created_at')
-        .eq('referred_by', wallet)
-        .order('created_at', { ascending: false });
-
-      const referrals = (refs || []).map((r) => ({
+      const refs = await getReferrals(wallet);
+      const referrals = refs.map((r) => ({
         referred_wallet: r.wallet_address,
         created_at: r.created_at,
       }));
       let totalTeam = referrals.length;
 
       for (const r of referrals) {
-        const { count } = await supabase
-          .from('referral_codes')
-          .select('*', { count: 'exact', head: true })
-          .eq('referred_by', r.referred_wallet);
-        totalTeam += count || 0;
+        const count = await getReferralCountBy(r.referred_wallet);
+        totalTeam += count;
       }
 
       const referredWallets = referrals.map((r) => r.referred_wallet);
       let totalTeamStaked = 0;
       if (referredWallets.length > 0) {
-        const { data: stakes } = await supabase
-          .from('stakes')
-          .select('amount')
-          .in('wallet_address', referredWallets)
-          .eq('status', 'active');
-        totalTeamStaked = stakes?.reduce((s, st) => s + Number(st.amount), 0) || 0;
+        const stakes = await getStakeAmounts(referredWallets);
+        totalTeamStaked = stakes.reduce((s, st) => s + Number(st.amount), 0);
       }
 
       setStats({

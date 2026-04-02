@@ -18,7 +18,7 @@ import { LevelIncome } from './components/LevelIncome';
 import { RewardClaim } from './components/RewardClaim';
 import { ReferralSection } from './components/ReferralSection';
 import { TransactionHistory } from './components/TransactionHistory';
-import { supabase } from './lib/supabase';
+import { getTvl, getReferralCount, lookupReferralCode, upsertReferral } from './lib/api';
 import { TOKEN_CONFIG } from './lib/tokenConfig';
 import { fetchTokenPrice } from './lib/priceApi';
 import rubixLogo from './assets/rubix-logo.svg';
@@ -34,26 +34,24 @@ function App() {
   const [priceChange24h, setPriceChange24h] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchTvl = async () => {
-      const { data } = await supabase
-        .from('stakes')
-        .select('amount')
-        .eq('status', 'active');
-      const total = data?.reduce((sum, s) => sum + Number(s.amount), 0) ?? 0;
-      setTvl(total);
+    const fetchTvlData = async () => {
+      try {
+        const total = await getTvl();
+        setTvl(total);
+      } catch {
+        setTvl(0);
+      }
     };
-    fetchTvl();
-    const interval = setInterval(fetchTvl, 10000);
+    fetchTvlData();
+    const interval = setInterval(fetchTvlData, 10000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const { count } = await supabase
-          .from('referral_codes')
-          .select('*', { count: 'exact', head: true });
-        setTotalUsers(count ?? 0);
+        const count = await getReferralCount();
+        setTotalUsers(count);
       } catch {
         setTotalUsers(0);
       }
@@ -82,17 +80,9 @@ function App() {
       const code = wallet;
       let referredBy: string | null = null;
       if (refCode) {
-        const { data } = await supabase
-          .from('referral_codes')
-          .select('wallet_address')
-          .eq('referral_code', refCode.trim())
-          .maybeSingle();
-        referredBy = data?.wallet_address ?? null;
+        referredBy = await lookupReferralCode(refCode);
       }
-      await supabase.from('referral_codes').upsert(
-        { wallet_address: wallet, referral_code: code, referred_by: referredBy },
-        { onConflict: 'wallet_address' }
-      );
+      await upsertReferral({ wallet_address: wallet, referral_code: code, referred_by: referredBy });
     };
     registerUser().catch(() => {});
   }, [publicKey]);

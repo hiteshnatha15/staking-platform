@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { IconGift, IconWallet } from './icons/ProIcons';
-import { supabase, Stake } from '../lib/supabase';
-import { TOKEN_CONFIG, formatTokenAmount } from '../lib/tokenConfig';
+import { IconGift } from './icons/ProIcons';
+import { getActiveStakes, getRewardClaims, insertRewardClaim, Stake } from '../lib/api';
+import { TOKEN_CONFIG } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
 
 function calculateRewards(stake: Stake): number {
@@ -25,23 +25,15 @@ export const RewardClaim = () => {
     if (!publicKey) return;
 
     const fetchStakes = async () => {
-      const { data } = await supabase
-        .from('stakes')
-        .select('*')
-        .eq('wallet_address', publicKey.toString())
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-      setActiveStakes(data ?? []);
+      const data = await getActiveStakes(publicKey.toString());
+      setActiveStakes(data);
     };
 
     const fetchClaimed = async () => {
       try {
-        const { data } = await supabase
-          .from('reward_claims')
-          .select('stake_id, amount')
-          .eq('wallet_address', publicKey.toString());
+        const data = await getRewardClaims(publicKey.toString());
         const byStake: Record<string, number> = {};
-        data?.forEach((r: { stake_id: string | null; amount: number }) => {
+        data.forEach((r) => {
           if (r.stake_id) {
             byStake[r.stake_id] = (byStake[r.stake_id] ?? 0) + Number(r.amount);
           }
@@ -74,13 +66,12 @@ export const RewardClaim = () => {
       for (const stake of activeStakes) {
         const amount = getClaimablePerStake(stake);
         if (amount <= 0) continue;
-        const { error } = await supabase.from('reward_claims').insert({
+        await insertRewardClaim({
           wallet_address: publicKey.toString(),
           stake_id: stake.id,
           amount,
           transaction_signature: `reward_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         });
-        if (error) throw error;
       }
       toast.success(`${totalClaimable.toFixed(4)} ${TOKEN_CONFIG.symbol} rewards claimed!`);
       setClaimedByStake((prev) => {
