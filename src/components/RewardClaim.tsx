@@ -100,27 +100,27 @@ export const RewardClaim = () => {
 
   if (!publicKey) {
     return (
-      <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-8 text-center">
-        <IconGift className="mx-auto mb-4 h-16 w-16 text-slate-500" />
-        <h3 className="mb-2 text-xl font-bold text-slate-100">Claim Rewards</h3>
-        <p className="text-slate-400">Connect wallet to claim staking rewards</p>
+      <div className="rounded-xl sm:rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 sm:p-8 text-center">
+        <IconGift className="mx-auto mb-3 sm:mb-4 h-12 w-12 sm:h-16 sm:w-16 text-slate-500" />
+        <h3 className="mb-2 text-lg sm:text-xl font-bold text-slate-100">Claim Rewards</h3>
+        <p className="text-sm sm:text-base text-slate-400">Connect wallet to claim staking rewards</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-700/60 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/20">
-            <IconGift className="h-7 w-7 text-cyan-400" />
+    <div className="rounded-xl sm:rounded-2xl border border-slate-700/60 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 p-4 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex h-11 w-11 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-cyan-500/20">
+            <IconGift className="h-5 w-5 sm:h-7 sm:w-7 text-cyan-400" />
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-400">Claimable Rewards</p>
-            <p className="text-3xl font-bold text-cyan-400">
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-medium text-slate-400">Claimable Rewards</p>
+            <p className="text-xl sm:text-3xl font-bold text-cyan-400 truncate">
               {totalClaimable.toFixed(4)} {TOKEN_CONFIG.symbol}
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-slate-500">
               From {activeStakes.length} active stake{activeStakes.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -129,7 +129,7 @@ export const RewardClaim = () => {
           <button
             onClick={handleClaimAll}
             disabled={isClaiming}
-            className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-cyan-600 px-6 py-3 font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+            className="flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-cyan-600 px-5 sm:px-6 py-3 text-sm sm:text-base font-semibold text-white hover:bg-cyan-500 active:bg-cyan-500 disabled:opacity-50"
           >
             {isClaiming ? (
               <>

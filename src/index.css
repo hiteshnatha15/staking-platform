@@ -46,20 +46,24 @@
   .card-hover {
     @apply transition-all duration-300 ease-out;
   }
-  .card-hover:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(148, 163, 184, 0.15);
+  @media (hover: hover) {
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(148, 163, 184, 0.15);
+    }
   }
 
   .card-interactive {
     @apply transition-all duration-200 ease-out cursor-pointer;
   }
-  .card-interactive:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.5);
+  @media (hover: hover) {
+    .card-interactive:hover {
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.5);
+    }
   }
   .card-interactive:active {
-    transform: translateY(0) scale(0.99);
+    transform: translateY(0) scale(0.98);
   }
 
   .btn-primary {
@@ -85,6 +89,14 @@
 
   .badge {
     @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -150,6 +162,13 @@ body {
 
 html {
   scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 input[type='number']::-webkit-inner-spin-button,

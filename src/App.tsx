@@ -165,6 +165,9 @@ function App() {
     amber: { icon: 'text-amber-400', bg: 'bg-amber-500/15', ring: 'ring-amber-500/20', subColor: 'text-slate-500' },
   };
 
+  const mainTabs = tabs.slice(0, 5);
+  const moreTabs = tabs.slice(5);
+
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-slate-100">
       {/* Animated background orbs */}
@@ -174,19 +177,19 @@ function App() {
         <div className="absolute bottom-0 right-1/3 h-[350px] w-[350px] rounded-full bg-cyan-500/[0.03] blur-[100px] animate-float" style={{ animationDelay: '-5s' }} />
       </div>
 
-      {/* Navbar + Tab Navigation - sticky together at top */}
+      {/* Navbar */}
       <div className="sticky top-0 z-30">
         <nav className="border-b border-slate-800/60 bg-[#0a0f1a]/90 backdrop-blur-xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex h-14 sm:h-16 items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="flex h-14 sm:h-16 items-center justify-between gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <img
                   src={rubixLogo}
                   alt="Rubix"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain shrink-0"
+                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl object-contain shrink-0"
                 />
                 <div className="min-w-0">
-                  <h1 className="text-base font-bold tracking-tight text-white sm:text-lg truncate">
+                  <h1 className="text-sm font-bold tracking-tight text-white sm:text-lg truncate">
                     {TOKEN_CONFIG.symbol} Network
                   </h1>
                   <p className="hidden sm:block text-[10px] text-slate-500">
@@ -194,7 +197,7 @@ function App() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <div className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/50 px-3 py-1.5">
                   <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-xs font-medium text-slate-400">
@@ -203,13 +206,13 @@ function App() {
                 </div>
                 <BaseWalletMultiButton
                   labels={{
-                    'change-wallet': 'Change wallet',
-                    connecting: 'Connecting ...',
+                    'change-wallet': 'Change',
+                    connecting: 'Connecting...',
                     'copy-address': 'Copy address',
                     copied: 'Copied',
                     disconnect: 'Disconnect',
                     'has-wallet': 'Connect',
-                    'no-wallet': 'Connect Wallet',
+                    'no-wallet': 'Connect',
                   }}
                 />
               </div>
@@ -217,10 +220,10 @@ function App() {
           </div>
         </nav>
 
-        {/* Tab navigation - directly under navbar */}
-        <div className="border-b border-slate-800/40 bg-[#0a0f1a]/85 backdrop-blur-xl">
+        {/* Desktop tab navigation - hidden on mobile */}
+        <div className="hidden sm:block border-b border-slate-800/40 bg-[#0a0f1a]/85 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-            <div className="flex gap-0.5 sm:gap-1 py-1.5 sm:py-2 overflow-x-auto scrollbar-none">
+            <div className="flex gap-1 py-2 overflow-x-auto scrollbar-none">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -228,7 +231,7 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`relative flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 sm:px-4 sm:py-2 sm:text-sm ${
+                    className={`relative flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
                       isActive
                         ? 'text-white'
                         : 'text-slate-500 hover:text-slate-300 active:scale-95'
@@ -238,7 +241,7 @@ function App() {
                       <span className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 shadow-md shadow-emerald-500/20" />
                     )}
                     <span className="relative z-10 flex items-center gap-1.5">
-                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <Icon className="h-4 w-4" />
                       <span>{tab.name}</span>
                     </span>
                   </button>
@@ -249,12 +252,12 @@ function App() {
         </div>
       </div>
 
-      {/* Main content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      {/* Main content - extra bottom padding on mobile for bottom nav */}
+      <main className="relative z-10 max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 pb-24 sm:pb-6">
         {activeTab === 'dashboard' && (
-          <div className="space-y-8 animate-fadeIn">
+          <div className="space-y-5 sm:space-y-8 animate-fadeIn">
             {/* Stat cards - clickable */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
               {statCards.map((card) => {
                 const Icon = card.icon;
                 const c = colorMap[card.color];
@@ -263,19 +266,19 @@ function App() {
                     key={card.label}
                     type="button"
                     onClick={() => setActiveTab(card.tab)}
-                    className={`group relative text-left rounded-2xl border border-slate-800/60 bg-slate-900/50 p-4 sm:p-6 backdrop-blur-sm card-interactive hover:border-slate-700/80 hover:shadow-2xl ${card.glow}`}
+                    className={`group relative text-left rounded-xl sm:rounded-2xl border border-slate-800/60 bg-slate-900/50 p-3 sm:p-6 backdrop-blur-sm card-interactive hover:border-slate-700/80 hover:shadow-2xl ${card.glow}`}
                   >
-                    <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${c.bg} ring-1 ${c.ring} transition-transform duration-300 group-hover:scale-110`}>
-                      <Icon className={`h-5 w-5 ${c.icon}`} />
+                    <div className={`mb-2 sm:mb-3 flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl ${c.bg} ring-1 ${c.ring} transition-transform duration-300 group-hover:scale-110`}>
+                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${c.icon}`} />
                     </div>
-                    <p className="text-xs sm:text-sm font-medium text-slate-400 mb-1 truncate">{card.label}</p>
-                    <p className="text-xl sm:text-2xl font-bold text-white truncate">{card.value}</p>
+                    <p className="text-[11px] sm:text-sm font-medium text-slate-400 mb-0.5 sm:mb-1 truncate">{card.label}</p>
+                    <p className="text-base sm:text-2xl font-bold text-white truncate">{card.value}</p>
                     {card.sub && (
-                      <p className={`mt-0.5 text-xs font-medium ${card.color === 'violet' ? c.subColor : 'text-slate-500'}`}>
+                      <p className={`mt-0.5 text-[10px] sm:text-xs font-medium ${card.color === 'violet' ? c.subColor : 'text-slate-500'}`}>
                         {card.sub}
                       </p>
                     )}
-                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <span className="text-[10px] font-medium text-slate-500">View &rarr;</span>
                     </div>
                   </button>
@@ -284,30 +287,30 @@ function App() {
             </div>
 
             {/* Feature highlights */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               {[
                 { text: '30% Auto-Stake Bonus', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
                 { text: '1% Daily Unstake', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
                 { text: '3-Level Referrals', color: 'text-violet-400', bg: 'bg-violet-500/10' },
                 { text: '10% Daily Withdrawal', color: 'text-amber-400', bg: 'bg-amber-500/10' },
               ].map((f) => (
-                <div key={f.text} className={`rounded-xl ${f.bg} border border-slate-800/40 px-3 py-3 sm:px-4 sm:py-3 text-center`}>
-                  <p className={`text-xs sm:text-sm font-semibold ${f.color}`}>{f.text}</p>
+                <div key={f.text} className={`rounded-lg sm:rounded-xl ${f.bg} border border-slate-800/40 px-2.5 py-2.5 sm:px-4 sm:py-3 text-center`}>
+                  <p className={`text-[11px] sm:text-sm font-semibold ${f.color}`}>{f.text}</p>
                 </div>
               ))}
             </div>
 
             {/* Main content grid */}
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <StakingInterface />
               </div>
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <ReferralSection />
               </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
               <TeamDashboard />
               <LevelIncome />
             </div>
@@ -321,21 +324,21 @@ function App() {
         )}
 
         {activeTab === 'team' && (
-          <div className="animate-fadeIn space-y-6">
+          <div className="animate-fadeIn space-y-4 sm:space-y-6">
             <ReferralSection />
             <TeamDashboard />
           </div>
         )}
 
         {activeTab === 'income' && (
-          <div className="animate-fadeIn space-y-6">
+          <div className="animate-fadeIn space-y-4 sm:space-y-6">
             <RewardClaim />
             <LevelIncome />
           </div>
         )}
 
         {activeTab === 'referral-wallet' && (
-          <div className="animate-fadeIn space-y-6">
+          <div className="animate-fadeIn space-y-4 sm:space-y-6">
             <ReferralSection />
             <LevelIncome />
           </div>
@@ -354,11 +357,56 @@ function App() {
         )}
       </main>
 
-      <footer className="relative z-10 mt-12 border-t border-slate-800/40 py-6 text-center">
-        <p className="text-xs text-slate-600">
+      <footer className="relative z-10 mt-8 sm:mt-12 border-t border-slate-800/40 py-4 sm:py-6 text-center mb-20 sm:mb-0">
+        <p className="text-[10px] sm:text-xs text-slate-600">
           {TOKEN_CONFIG.symbol} Staking Network &middot; Built on Solana
         </p>
       </footer>
+
+      {/* Mobile bottom navigation */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-slate-700/60 bg-[#0a0f1a]/95 backdrop-blur-xl pb-safe">
+        <div className="grid grid-cols-5 gap-0">
+          {mainTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center justify-center gap-0.5 py-2 pt-2.5 transition-colors duration-150 ${
+                  isActive ? 'text-emerald-400' : 'text-slate-500 active:text-slate-300'
+                }`}
+              >
+                <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-400' : ''}`} />
+                <span className="text-[10px] font-medium leading-tight">{tab.name}</span>
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-b-full bg-emerald-400" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {moreTabs.length > 0 && (
+          <div className="grid grid-cols-2 gap-0 border-t border-slate-800/40">
+            {moreTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center justify-center gap-1.5 py-2 transition-colors duration-150 ${
+                    isActive ? 'text-emerald-400' : 'text-slate-500 active:text-slate-300'
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-emerald-400' : ''}`} />
+                  <span className="text-[11px] font-medium">{tab.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </nav>
     </div>
   );
 }

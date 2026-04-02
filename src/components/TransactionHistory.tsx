@@ -120,10 +120,10 @@ export const TransactionHistory = () => {
 
   if (!publicKey) {
     return (
-      <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-12 text-center">
-        <IconHistory className="mx-auto mb-4 h-16 w-16 text-slate-500" />
-        <h3 className="mb-2 text-xl font-bold text-slate-100">Transaction History</h3>
-        <p className="text-slate-400">Connect wallet to view your transactions</p>
+      <div className="rounded-xl sm:rounded-2xl border border-slate-700/60 bg-slate-900/60 p-8 sm:p-12 text-center">
+        <IconHistory className="mx-auto mb-3 sm:mb-4 h-12 w-12 sm:h-16 sm:w-16 text-slate-500" />
+        <h3 className="mb-2 text-lg sm:text-xl font-bold text-slate-100">Transaction History</h3>
+        <p className="text-sm sm:text-base text-slate-400">Connect wallet to view your transactions</p>
       </div>
     );
   }
@@ -161,72 +161,76 @@ export const TransactionHistory = () => {
   const getAmountSign = (type: TxItem['type']) => (type === 'stake' ? '+' : '-');
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-700/60">
-          <IconHistory className="h-6 w-6 text-slate-300" />
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-slate-700/60">
+          <IconHistory className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300" />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-slate-100">Transaction History</h3>
-          <p className="text-sm text-slate-400">All your stakes, withdrawals & earnings</p>
+          <h3 className="text-lg sm:text-xl font-bold text-slate-100">Transaction History</h3>
+          <p className="text-xs sm:text-sm text-slate-400">All your stakes, withdrawals & earnings</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+        <div className="flex items-center justify-center py-12 sm:py-16">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-12 text-center">
-          <IconWallet className="mx-auto mb-3 h-12 w-12 text-slate-600" />
-          <p className="text-slate-400">No transactions yet</p>
-          <p className="mt-1 text-sm text-slate-500">Stake tokens to see your history</p>
+        <div className="rounded-xl sm:rounded-2xl border border-slate-700/60 bg-slate-900/60 p-8 sm:p-12 text-center">
+          <IconWallet className="mx-auto mb-3 h-10 w-10 sm:h-12 sm:w-12 text-slate-600" />
+          <p className="text-sm sm:text-base text-slate-400">No transactions yet</p>
+          <p className="mt-1 text-xs sm:text-sm text-slate-500">Stake tokens to see your history</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {items.map((item) => {
             const explorerUrl = getExplorerTxUrl(item.transaction_signature);
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-800/40 px-4 py-4 transition-colors hover:border-slate-600/80"
+                className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/60 bg-slate-800/40 px-3 py-3 sm:px-4 sm:py-4 transition-colors hover:border-slate-600/80"
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700/60">
+                <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-slate-700/60">
                     {getTypeIcon(item.type)}
                   </div>
-                  <div>
-                    <p className="font-semibold text-slate-100">{getTypeLabel(item.type)}</p>
-                    <p className="text-xs text-slate-500">
+                  <div className="min-w-0">
+                    <p className="text-sm sm:text-base font-semibold text-slate-100">{getTypeLabel(item.type)}</p>
+                    <p className="text-[10px] sm:text-xs text-slate-500 truncate">
                       {new Date(item.created_at).toLocaleString(undefined, {
-                        dateStyle: 'medium',
+                        dateStyle: 'short',
                         timeStyle: 'short',
                       })}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <p
-                    className={`font-mono font-semibold ${
-                      item.type === 'stake' ? 'text-emerald-400' : 'text-slate-200'
-                    }`}
-                  >
-                    {getAmountSign(item.type)}
-                    {item.amount.toFixed(4)} {TOKEN_CONFIG.symbol}
-                  </p>
+                <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                  <div className="text-right">
+                    <p
+                      className={`font-mono text-xs sm:text-base font-semibold ${
+                        item.type === 'stake' ? 'text-emerald-400' : 'text-slate-200'
+                      }`}
+                    >
+                      {getAmountSign(item.type)}
+                      {item.amount.toFixed(4)}
+                    </p>
+                    <p className="text-[10px] text-slate-500 sm:hidden">{TOKEN_CONFIG.symbol}</p>
+                    <span className="hidden sm:inline text-[10px] text-slate-500"> {TOKEN_CONFIG.symbol}</span>
+                  </div>
                   {explorerUrl ? (
                     <a
                       href={explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-700/60 text-slate-400 transition-colors hover:bg-emerald-500/20 hover:text-emerald-400"
+                      className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-slate-700/60 text-slate-400 transition-colors hover:bg-emerald-500/20 hover:text-emerald-400"
                       aria-label="View on Explorer"
                     >
-                      <IconExternalLink className="h-4 w-4" />
+                      <IconExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </a>
                   ) : (
-                    <span className="text-xs text-slate-500">
-                      {item.status || 'Processing'}
+                    <span className="text-[10px] sm:text-xs text-slate-500 w-8 sm:w-9 text-center">
+                      {item.status || '...'}
                     </span>
                   )}
                 </div>

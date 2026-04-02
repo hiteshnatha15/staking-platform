@@ -166,12 +166,12 @@ export const StakingInterface = () => {
 
   if (!publicKey) {
     return (
-      <div className="text-center py-16 sm:py-20">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-          <IconWallet className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+      <div className="text-center py-12 sm:py-20 px-4">
+        <div className="w-14 h-14 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <IconWallet className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-100 mb-3">Connect Your Wallet</h2>
-        <p className="text-slate-400 text-base sm:text-lg max-w-md mx-auto">
+        <h2 className="text-xl sm:text-3xl font-bold text-slate-100 mb-2 sm:mb-3">Connect Your Wallet</h2>
+        <p className="text-slate-400 text-sm sm:text-lg max-w-md mx-auto">
           Connect your Solana wallet to stake {symbol} and earn {TOKEN_CONFIG.apr}% APR
         </p>
       </div>
@@ -193,81 +193,81 @@ export const StakingInterface = () => {
       )}
 
       {/* Wallet stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="group glass-card rounded-2xl p-4 sm:p-5 card-hover">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-500 text-xs font-medium">Wallet</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="group glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5 card-hover">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-slate-500 text-[10px] sm:text-xs font-medium">Wallet</span>
             <button
               type="button"
               onClick={fetchBalances}
-              className="rounded-md px-2 py-1 text-[10px] font-medium text-slate-500 hover:bg-slate-700/40 hover:text-slate-300 transition-colors duration-150"
+              className="rounded-md px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] font-medium text-slate-500 hover:bg-slate-700/40 hover:text-slate-300 transition-colors duration-150"
             >
               Refresh
             </button>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-slate-100 truncate">
+          <p className="text-lg sm:text-2xl font-bold text-slate-100 truncate">
             {solBalance !== null ? solBalance.toFixed(4) : '---'}
           </p>
-          <p className="text-[10px] text-slate-500 mb-1.5">SOL</p>
+          <p className="text-[10px] text-slate-500 mb-1">SOL</p>
           <div className="pt-1.5 border-t border-slate-700/40">
-            <p className="text-lg sm:text-xl font-bold text-slate-100 truncate">
+            <p className="text-base sm:text-xl font-bold text-slate-100 truncate">
               {tokenBalance !== null ? formatTokenAmount(tokenBalance) : '---'}
             </p>
             <p className="text-[10px] text-slate-500">{symbol}</p>
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl p-4 sm:p-5 card-hover">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-500 text-xs font-medium">Total Staked</span>
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <IconCoins className="w-4 h-4 text-emerald-400" />
+        <div className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5 card-hover">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-slate-500 text-[10px] sm:text-xs font-medium">Total Staked</span>
+            <div className="p-1.5 sm:p-2 bg-emerald-500/10 rounded-lg">
+              <IconCoins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-slate-100 truncate">{formatTokenAmount(totalStaked)}</p>
+          <p className="text-lg sm:text-2xl font-bold text-slate-100 truncate">{formatTokenAmount(totalStaked)}</p>
           <p className="text-[10px] text-slate-500">{symbol}</p>
         </div>
 
-        <div className="glass-card rounded-2xl p-4 sm:p-5 card-hover">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-500 text-xs font-medium">Rewards</span>
-            <div className="p-2 bg-green-500/10 rounded-lg">
-              <IconChartTrendingUp className="w-4 h-4 text-green-400" />
+        <div className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5 card-hover">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-slate-500 text-[10px] sm:text-xs font-medium">Rewards</span>
+            <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg">
+              <IconChartTrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-green-400 truncate">{formatTokenAmount(totalRewards)}</p>
+          <p className="text-lg sm:text-2xl font-bold text-green-400 truncate">{formatTokenAmount(totalRewards)}</p>
           <p className="text-[10px] text-slate-500">{symbol}</p>
         </div>
 
-        <div className="glass-card rounded-2xl p-4 sm:p-5 card-hover">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-500 text-xs font-medium">Positions</span>
-            <div className="p-2 bg-cyan-500/10 rounded-lg">
-              <IconClock className="w-4 h-4 text-cyan-400" />
+        <div className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5 card-hover">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-slate-500 text-[10px] sm:text-xs font-medium">Positions</span>
+            <div className="p-1.5 sm:p-2 bg-cyan-500/10 rounded-lg">
+              <IconClock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-cyan-400">{userStakes.length}</p>
+          <p className="text-lg sm:text-2xl font-bold text-cyan-400">{userStakes.length}</p>
           <p className="text-[10px] text-slate-500">Active Stakes</p>
         </div>
       </div>
 
       {/* Stake form */}
-      <div className="glass-card rounded-2xl p-5 sm:p-8">
-        <h3 className="text-xl sm:text-2xl font-bold text-slate-100 mb-1">Stake {symbol}</h3>
-        <p className="text-slate-400 text-sm mb-1">
+      <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-8">
+        <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-1">Stake {symbol}</h3>
+        <p className="text-slate-400 text-xs sm:text-sm mb-1">
           Lock {symbol} to earn {TOKEN_CONFIG.apr}% APR rewards
         </p>
-        <p className="text-emerald-400 text-xs font-medium mb-5">
+        <p className="text-emerald-400 text-[11px] sm:text-xs font-medium mb-4 sm:mb-5">
           +{TOKEN_CONFIG.stakingBonusPercent}% instant bonus: stake 100 = get {(100 * (1 + TOKEN_CONFIG.stakingBonusPercent / 100)).toFixed(0)} {symbol}
         </p>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {error && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs sm:text-sm">
               {error}
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">
+            <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
               Amount to Stake
             </label>
             <div className="flex gap-2">
@@ -276,13 +276,13 @@ export const StakingInterface = () => {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder={`0.00 ${symbol}`}
-                className="flex-1 px-4 py-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-100 font-semibold text-lg placeholder-slate-600"
+                className="flex-1 min-w-0 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-100 font-semibold text-base sm:text-lg placeholder-slate-600"
               />
               {tokenBalance !== null && (
                 <button
                   type="button"
                   onClick={() => setAmount(tokenBalance.toString())}
-                  className="px-4 py-3.5 rounded-xl text-sm font-semibold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 transition-colors duration-150"
+                  className="px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl text-sm font-semibold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 active:bg-emerald-500/20 transition-colors duration-150"
                 >
                   Max
                 </button>
@@ -292,7 +292,7 @@ export const StakingInterface = () => {
           <button
             onClick={handleStake}
             disabled={isStaking || !amount || Number(amount) <= 0}
-            className="w-full btn-primary flex items-center justify-center gap-2 py-4 text-base sm:text-lg"
+            className="w-full btn-primary flex items-center justify-center gap-2 py-3.5 sm:py-4 text-sm sm:text-lg"
           >
             {isStaking ? (
               <>
@@ -312,8 +312,8 @@ export const StakingInterface = () => {
       {/* Active stakes list */}
       {userStakes.length > 0 && (
         <div>
-          <h3 className="text-xl sm:text-2xl font-bold text-slate-100 mb-4">Your Active Stakes</h3>
-          <div className="space-y-3">
+          <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-3 sm:mb-4">Your Active Stakes</h3>
+          <div className="space-y-2.5 sm:space-y-3">
             {userStakes.map((stake, index) => {
               const principal = stake.deposited_amount != null ? Number(stake.deposited_amount) : Number(stake.amount);
               const stakeDate = stake.start_time ?? stake.created_at;
@@ -324,34 +324,34 @@ export const StakingInterface = () => {
               return (
                 <div
                   key={stake.id}
-                  className="glass-card rounded-2xl p-4 sm:p-5 card-hover animate-slideUp"
+                  className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5 card-hover animate-slideUp"
                   style={{ animationDelay: `${index * 80}ms` }}
                 >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
                     <div>
-                      <p className="text-slate-500 text-xs mb-1">Staked</p>
-                      <p className="text-lg sm:text-xl font-bold text-slate-100 truncate">
+                      <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Staked</p>
+                      <p className="text-base sm:text-xl font-bold text-slate-100 truncate">
                         {formatTokenAmount(Number(stake.amount))}
                       </p>
                       <p className="text-[10px] text-slate-600">{symbol}</p>
                     </div>
                     <div>
-                      <p className="text-slate-500 text-xs mb-1">Rewards</p>
-                      <p className="text-lg sm:text-xl font-bold text-green-400 truncate">
+                      <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Rewards</p>
+                      <p className="text-base sm:text-xl font-bold text-green-400 truncate">
                         {calculateRewards(stake)}
                       </p>
                       <p className="text-[10px] text-slate-600">{symbol}</p>
                     </div>
                     <div>
-                      <p className="text-slate-500 text-xs mb-1">Withdrawable</p>
-                      <p className="text-lg sm:text-xl font-bold text-emerald-400 truncate">
+                      <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Withdrawable</p>
+                      <p className="text-base sm:text-xl font-bold text-emerald-400 truncate">
                         {formatTokenAmount(available)}
                       </p>
                       <p className="text-[10px] text-slate-600">1% daily</p>
                     </div>
                     <div>
-                      <p className="text-slate-500 text-xs mb-1">Since</p>
-                      <p className="text-lg sm:text-xl font-bold text-slate-100">
+                      <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Since</p>
+                      <p className="text-base sm:text-xl font-bold text-slate-100">
                         {new Date(stakeDate).toLocaleDateString(undefined, {
                           month: 'short',
                           day: 'numeric',
@@ -365,9 +365,9 @@ export const StakingInterface = () => {
                       </p>
                     </div>
                     <div className="flex items-center justify-start sm:justify-end col-span-2 sm:col-span-1">
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                         <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                        <span className="text-emerald-400 text-xs font-semibold">Active</span>
+                        <span className="text-emerald-400 text-[11px] sm:text-xs font-semibold">Active</span>
                       </div>
                     </div>
                   </div>

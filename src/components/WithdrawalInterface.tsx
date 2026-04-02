@@ -148,7 +148,7 @@ export const WithdrawalInterface = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const base = 'px-3 py-1 rounded-full text-sm font-medium';
+    const base = 'px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-sm font-medium';
     switch (status) {
       case 'completed':
         return `${base} bg-green-500/20 text-green-400`;
@@ -165,32 +165,32 @@ export const WithdrawalInterface = () => {
 
   if (!publicKey) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-16">
-        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center">
-          <IconWallet className="w-10 h-10 text-white" />
+      <div className="max-w-2xl mx-auto text-center py-12 sm:py-16 px-4">
+        <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center">
+          <IconWallet className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
         </div>
-        <h2 className="text-3xl font-bold text-slate-100 mb-4">Withdrawal Center</h2>
-        <p className="text-slate-400">Connect your wallet to manage withdrawals</p>
+        <h2 className="text-xl sm:text-3xl font-bold text-slate-100 mb-3 sm:mb-4">Withdrawal Center</h2>
+        <p className="text-sm sm:text-base text-slate-400">Connect your wallet to manage withdrawals</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="glass-card rounded-2xl p-5 sm:p-8">
-        <h3 className="text-xl sm:text-2xl font-bold text-slate-100 mb-1">Withdraw Staked {symbol}</h3>
-        <p className="text-slate-400 text-sm mb-6">
+    <div className="max-w-7xl mx-auto space-y-5 sm:space-y-8">
+      <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-8">
+        <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-1">Withdraw Staked {symbol}</h3>
+        <p className="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6">
           1% of your remaining staked balance is released daily for withdrawal.
         </p>
 
         {userStakes.length === 0 ? (
-          <div className="text-center py-12">
-            <IconArrowDownCircle className="w-16 h-16 mx-auto mb-4 text-slate-500" />
-            <p className="text-slate-400">No active stakes to withdraw</p>
+          <div className="text-center py-10 sm:py-12">
+            <IconArrowDownCircle className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-slate-500" />
+            <p className="text-sm sm:text-base text-slate-400">No active stakes to withdraw</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="space-y-3">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-2.5 sm:space-y-3">
               {userStakes.map((stake) => {
                 const principal = stake.deposited_amount != null ? Number(stake.deposited_amount) : Number(stake.amount);
                 const stakeDate = stake.start_time ?? stake.created_at;
@@ -209,44 +209,47 @@ export const WithdrawalInterface = () => {
                       setSelectedStake(isSelected ? '' : stake.id);
                       setWithdrawAmount('');
                     }}
-                    className={`w-full text-left rounded-xl p-5 border transition-all ${
+                    className={`w-full text-left rounded-xl p-3.5 sm:p-5 border transition-all ${
                       isSelected
                         ? 'border-violet-500/60 bg-violet-500/10'
                         : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'
                     }`}
                   >
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                       <div>
-                        <p className="text-xs text-slate-500 mb-1">Deposited</p>
-                        <p className="text-lg font-bold text-slate-100">
-                          {formatTokenAmount(principal)} <span className="text-xs text-slate-500">{symbol}</span>
+                        <p className="text-[10px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Deposited</p>
+                        <p className="text-base sm:text-lg font-bold text-slate-100 truncate">
+                          {formatTokenAmount(principal)}
                         </p>
+                        <p className="text-[10px] text-slate-500">{symbol}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 mb-1">Days Elapsed</p>
-                        <p className="text-lg font-bold text-slate-100">{days}</p>
+                        <p className="text-[10px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Days</p>
+                        <p className="text-base sm:text-lg font-bold text-slate-100">{days}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 mb-1">Already Withdrawn</p>
-                        <p className="text-lg font-bold text-amber-400">
-                          {formatTokenAmount(alreadyWithdrawn)} <span className="text-xs text-slate-500">{symbol}</span>
+                        <p className="text-[10px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Withdrawn</p>
+                        <p className="text-base sm:text-lg font-bold text-amber-400 truncate">
+                          {formatTokenAmount(alreadyWithdrawn)}
                         </p>
+                        <p className="text-[10px] text-slate-500">{symbol}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 mb-1">Available Now</p>
-                        <p className="text-lg font-bold text-green-400">
-                          {formatTokenAmount(available)} <span className="text-xs text-slate-500">{symbol}</span>
+                        <p className="text-[10px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Available</p>
+                        <p className="text-base sm:text-lg font-bold text-green-400 truncate">
+                          {formatTokenAmount(available)}
                         </p>
+                        <p className="text-[10px] text-slate-500">{symbol}</p>
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <div className="mt-2.5 sm:mt-3">
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs text-slate-500 mb-1">
                         <span>Released: {releasedPercent.toFixed(2)}%</span>
                         <span>
-                          {formatTokenAmount(totalReleased)} / {formatTokenAmount(principal)} {symbol}
+                          {formatTokenAmount(totalReleased)} / {formatTokenAmount(principal)}
                         </span>
                       </div>
-                      <div className="h-2 rounded-full bg-slate-700/60 overflow-hidden">
+                      <div className="h-1.5 sm:h-2 rounded-full bg-slate-700/60 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
                           style={{ width: `${Math.min(100, releasedPercent)}%` }}
@@ -259,12 +262,12 @@ export const WithdrawalInterface = () => {
             </div>
 
             {selectedStake && selectedStakeData && (
-              <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-6 space-y-4">
+              <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-4 sm:p-6 space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
                     Withdrawal Amount
                   </label>
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 sm:gap-3">
                     <input
                       type="number"
                       value={withdrawAmount}
@@ -272,35 +275,35 @@ export const WithdrawalInterface = () => {
                       placeholder={`0.00 ${symbol}`}
                       max={selectedAvailable}
                       step="any"
-                      className="flex-1 px-4 py-3 rounded-xl bg-slate-800/80 border border-slate-600 text-slate-100 font-semibold placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      className="flex-1 min-w-0 px-3 sm:px-4 py-3 rounded-xl bg-slate-800/80 border border-slate-600 text-slate-100 font-semibold placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                     />
                     <button
                       type="button"
                       onClick={() => setWithdrawAmount(selectedAvailable.toFixed(TOKEN_CONFIG.decimals))}
-                      className="px-4 py-3 rounded-xl text-sm font-semibold text-violet-400 border border-violet-500/40 hover:bg-violet-500/10 transition-colors"
+                      className="px-3 sm:px-4 py-3 rounded-xl text-sm font-semibold text-violet-400 border border-violet-500/40 hover:bg-violet-500/10 active:bg-violet-500/20 transition-colors"
                     >
                       Max
                     </button>
                   </div>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-[10px] sm:text-xs text-slate-500 mt-1.5 sm:mt-2">
                     Available: <span className="text-green-400 font-medium">{formatTokenAmount(selectedAvailable)} {symbol}</span>
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <button
                     onClick={() => handleWithdraw(selectedStake, true)}
                     disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) <= 0}
-                    className="btn-primary flex items-center justify-center gap-2 py-4 disabled:opacity-50"
+                    className="btn-primary flex items-center justify-center gap-2 py-3.5 sm:py-4 text-sm sm:text-base disabled:opacity-50"
                   >
                     {isWithdrawing ? 'Processing...' : 'Auto Withdraw'}
                   </button>
                   <button
                     onClick={() => handleWithdraw(selectedStake, false)}
                     disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) <= 0}
-                    className="w-full px-6 py-4 rounded-xl font-semibold text-slate-100 bg-slate-700 hover:bg-slate-600 border border-slate-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full px-4 sm:px-6 py-3.5 sm:py-4 rounded-xl font-semibold text-sm sm:text-base text-slate-100 bg-slate-700 hover:bg-slate-600 active:bg-slate-600 border border-slate-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isWithdrawing ? 'Processing...' : 'Request Manual Approval'}
+                    {isWithdrawing ? 'Processing...' : 'Manual Approval'}
                   </button>
                 </div>
               </div>
@@ -310,30 +313,31 @@ export const WithdrawalInterface = () => {
       </div>
 
       {withdrawals.length > 0 && (
-        <div className="glass-card rounded-2xl p-5 sm:p-8">
-          <h3 className="text-xl sm:text-2xl font-bold text-slate-100 mb-6">Withdrawal History</h3>
-          <div className="space-y-4">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-8">
+          <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-4 sm:mb-6">Withdrawal History</h3>
+          <div className="space-y-2.5 sm:space-y-4">
             {withdrawals.map((withdrawal) => (
               <div
                 key={withdrawal.id}
-                className="rounded-xl p-6 bg-slate-800/40 border border-slate-700/50 hover:border-violet-500/30 transition-colors"
+                className="rounded-xl p-3.5 sm:p-6 bg-slate-800/40 border border-slate-700/50 hover:border-violet-500/30 transition-colors"
               >
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 items-center">
                   <div>
-                    <p className="text-sm text-slate-500 mb-1">Amount</p>
-                    <p className="text-lg font-semibold text-slate-100">
-                      {Number(withdrawal.amount).toFixed(4)} {symbol}
+                    <p className="text-[10px] sm:text-sm text-slate-500 mb-0.5 sm:mb-1">Amount</p>
+                    <p className="text-base sm:text-lg font-semibold text-slate-100 truncate">
+                      {Number(withdrawal.amount).toFixed(4)}
                     </p>
+                    <p className="text-[10px] text-slate-500 sm:hidden">{symbol}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500 mb-1">Type</p>
-                    <p className="text-lg font-semibold text-slate-200 capitalize">
+                    <p className="text-[10px] sm:text-sm text-slate-500 mb-0.5 sm:mb-1">Type</p>
+                    <p className="text-base sm:text-lg font-semibold text-slate-200 capitalize">
                       {withdrawal.withdrawal_type}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500 mb-1">Status</p>
-                    <div className="flex items-center gap-2">
+                    <p className="text-[10px] sm:text-sm text-slate-500 mb-0.5 sm:mb-1">Status</p>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       {getStatusIcon(withdrawal.status)}
                       <span className={getStatusBadge(withdrawal.status)}>
                         {withdrawal.status}
@@ -341,12 +345,12 @@ export const WithdrawalInterface = () => {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500 mb-1">Requested</p>
-                    <p className="text-sm text-slate-300">
+                    <p className="text-[10px] sm:text-sm text-slate-500 mb-0.5 sm:mb-1">Date</p>
+                    <p className="text-xs sm:text-sm text-slate-300">
                       {new Date(withdrawal.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <div>
+                  <div className="hidden md:block">
                     {withdrawal.approved_by && (
                       <>
                         <p className="text-sm text-slate-500 mb-1">Approved By</p>
