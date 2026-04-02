@@ -47,7 +47,7 @@ jobs:
             --project $PROJECT_ID \
             --allow-unauthenticated \
             --port 8080 \
-            --set-env-vars "MONGODB_URI=${{ secrets.MONGODB_URI }}" \
+            --set-env-vars "MONGODB_URI=${{ secrets.MONGODB_URI }},ADMIN_USER=${{ secrets.ADMIN_USER }},ADMIN_PASS=${{ secrets.ADMIN_PASS }},ADMIN_JWT_SECRET=${{ secrets.ADMIN_JWT_SECRET }}" \
             --quiet
 
       - name: Show URL

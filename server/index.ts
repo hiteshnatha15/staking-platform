@@ -9,6 +9,7 @@ import { referralsRouter } from './routes/referrals.js';
 import { commissionsRouter } from './routes/commissions.js';
 import { rewardsRouter } from './routes/rewards.js';
 import { historyRouter } from './routes/history.js';
+import { adminRouter } from './routes/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '8080', 10);
@@ -22,6 +23,7 @@ app.use('/api/referrals', referralsRouter);
 app.use('/api/commissions', commissionsRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/history', historyRouter);
+app.use('/api/admin', adminRouter);
 
 const distPath = path.join(__dirname, '..', 'dist');
 app.use(express.static(distPath, { maxAge: '1y', immutable: true }));
