@@ -3,7 +3,6 @@ import { Stake } from '../models/Stake.js';
 
 export const stakesRouter = Router();
 
-// GET /api/stakes/tvl -- sum of active stake amounts
 stakesRouter.get('/tvl', async (_req, res) => {
   try {
     const result = await Stake.aggregate([
@@ -11,50 +10,79 @@ stakesRouter.get('/tvl', async (_req, res) => {
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]);
     res.json({ total: result[0]?.total ?? 0 });
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch TVL' });
   }
 });
 
-// GET /api/stakes?wallet_address=X&status=active,pending
 stakesRouter.get('/', async (req, res) => {
   try {
     const { wallet_address, status } = req.query;
-    const filter: Record<string, unknown> = {};
-    if (wallet_address) filter.wallet_address = wallet_address;
+    if (!wallet_address || typeof wallet_address !== 'string') {
+      return res.json([]);
+    }
+    const filter: Record<string, unknown> = { wallet_address };
     if (status) {
-      const statuses = (status as string).split(',');
+      const statuses = (status as string).split(',').filter(Boolean);
       filter.status = statuses.length === 1 ? statuses[0] : { $in: statuses };
     }
     const stakes = await Stake.find(filter).sort({ created_at: -1 }).lean();
-    const mapped = stakes.map((s) => ({ ...s, id: s._id }));
-    res.json(mapped);
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
+    res.json(stakes.map((s) => ({ ...s, id: s._id })));
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch stakes' });
   }
 });
 
-// POST /api/stakes
 stakesRouter.post('/', async (req, res) => {
   try {
-    const doc = await Stake.create(req.body);
+    const { wallet_address, amount, deposited_amount, transaction_signature, status } = req.body;
+
+    if (!wallet_address || typeof wallet_address !== 'string' || wallet_address.length < 32) {
+      return res.status(400).json({ error: 'Invalid wallet_address' });
+    }
+    if (typeof amount !== 'number' || amount <= 0) {
+      return res.status(400).json({ error: 'Invalid amount' });
+    }
+    if (typeof deposited_amount !== 'number' || deposited_amount <= 0) {
+      return res.status(400).json({ error: 'Invalid deposited_amount' });
+    }
+    if (!transaction_signature || typeof transaction_signature !== 'string') {
+      return res.status(400).json({ error: 'Invalid transaction_signature' });
+    }
+
+    const existing = await Stake.findOne({ transaction_signature }).lean();
+    if (existing) {
+      return res.status(200).json({ ...existing, id: existing._id, duplicate: true });
+    }
+
+    const doc = await Stake.create({
+      wallet_address,
+      amount,
+      deposited_amount,
+      transaction_signature,
+      status: status === 'pending' ? 'pending' : 'active',
+    });
     res.status(201).json({ ...doc.toObject(), id: doc._id });
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
+  } catch {
+    res.status(500).json({ error: 'Failed to create stake' });
   }
 });
 
-// PATCH /api/stakes/:txSignature -- update status by transaction_signature
 stakesRouter.patch('/:txSignature', async (req, res) => {
   try {
+    const allowedStatus = ['active', 'pending', 'withdrawn'];
+    const newStatus = req.body.status;
+    if (!newStatus || !allowedStatus.includes(newStatus)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
     const updated = await Stake.findOneAndUpdate(
       { transaction_signature: req.params.txSignature },
-      { $set: req.body },
+      { $set: { status: newStatus } },
       { new: true }
     );
     if (!updated) return res.status(404).json({ error: 'Not found' });
     res.json({ ...updated.toObject(), id: updated._id });
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
+  } catch {
+    res.status(500).json({ error: 'Failed to update stake' });
   }
 });

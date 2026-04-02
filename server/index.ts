@@ -14,7 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '8080', 10);
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '16kb' }));
 
 app.use('/api/stakes', stakesRouter);
 app.use('/api/withdrawals', withdrawalsRouter);

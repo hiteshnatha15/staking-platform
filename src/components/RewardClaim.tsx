@@ -4,14 +4,11 @@ import { IconGift } from './icons/ProIcons';
 import { getActiveStakes, getRewardClaims, insertRewardClaim, Stake } from '../lib/api';
 import { TOKEN_CONFIG } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
+import { calculateRewards } from '../lib/stakeCalc';
 
-function calculateRewards(stake: Stake): number {
+function getStakeRewards(stake: Stake): number {
   const stakeStart = stake.start_time ?? stake.created_at;
-  const hoursStaked = Math.floor(
-    (Date.now() - new Date(stakeStart).getTime()) / (1000 * 60 * 60)
-  );
-  const hourlyRate = TOKEN_CONFIG.dailyRate / 100 / 24;
-  return Number(stake.amount) * hourlyRate * hoursStaked;
+  return calculateRewards(Number(stake.amount), stakeStart);
 }
 
 export const RewardClaim = () => {
@@ -49,7 +46,7 @@ export const RewardClaim = () => {
   }, [publicKey]);
 
   const getClaimablePerStake = (stake: Stake): number => {
-    const earned = calculateRewards(stake);
+    const earned = getStakeRewards(stake);
     const claimed = claimedByStake[stake.id] ?? 0;
     return Math.max(0, earned - claimed);
   };

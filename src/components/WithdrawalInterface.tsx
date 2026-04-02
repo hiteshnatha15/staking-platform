@@ -4,23 +4,7 @@ import { IconArrowDownCircle, IconClock, IconCheckCircle, IconXCircle, IconAlert
 import { getActiveStakes, getWithdrawals, insertWithdrawal, Stake, Withdrawal } from '../lib/api';
 import { TOKEN_CONFIG, formatTokenAmount } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
-
-const DAILY_RELEASE_RATE = 0.01; // 1% per day
-
-/**
- * After N full days, remaining = principal * (1 - rate)^N
- * Total released = principal - remaining = principal * (1 - (1 - rate)^N)
- */
-function calcTotalReleased(principal: number, stakeDate: string): number {
-  const msElapsed = Date.now() - new Date(stakeDate).getTime();
-  const daysElapsed = Math.floor(msElapsed / (1000 * 60 * 60 * 24));
-  if (daysElapsed <= 0) return 0;
-  return principal * (1 - Math.pow(1 - DAILY_RELEASE_RATE, daysElapsed));
-}
-
-function getDaysElapsed(stakeDate: string): number {
-  return Math.floor((Date.now() - new Date(stakeDate).getTime()) / (1000 * 60 * 60 * 24));
-}
+import { calcTotalReleased, getDaysElapsed } from '../lib/stakeCalc';
 
 export const WithdrawalInterface = () => {
   const { publicKey } = useWallet();
@@ -287,6 +271,7 @@ export const WithdrawalInterface = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <button
+                    type="button"
                     onClick={() => handleWithdraw(selectedStake, true)}
                     disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) <= 0}
                     className="btn-primary flex items-center justify-center gap-2 py-3.5 sm:py-4 text-sm sm:text-base disabled:opacity-50"
@@ -294,6 +279,7 @@ export const WithdrawalInterface = () => {
                     {isWithdrawing ? 'Processing...' : 'Auto Withdraw'}
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleWithdraw(selectedStake, false)}
                     disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) <= 0}
                     className="w-full px-4 sm:px-6 py-3.5 sm:py-4 rounded-xl font-semibold text-sm sm:text-base text-slate-100 bg-slate-700 hover:bg-slate-600 active:bg-slate-600 border border-slate-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"

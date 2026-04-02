@@ -28,7 +28,7 @@ historyRouter.get('/', async (req, res) => {
 
     combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     res.json(combined.slice(0, 30));
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch history' });
   }
 });

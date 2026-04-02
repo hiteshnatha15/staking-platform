@@ -11,15 +11,7 @@ import {
   buildVaultTransaction,
   toRawAmount,
 } from '../lib/solana';
-
-const DAILY_RELEASE_RATE = 0.01;
-
-function calcTotalReleased(principal: number, stakeDate: string): number {
-  const msElapsed = Date.now() - new Date(stakeDate).getTime();
-  const daysElapsed = Math.floor(msElapsed / (1000 * 60 * 60 * 24));
-  if (daysElapsed <= 0) return 0;
-  return principal * (1 - Math.pow(1 - DAILY_RELEASE_RATE, daysElapsed));
-}
+import { calcTotalReleased, calculateRewards as calcRewards } from '../lib/stakeCalc';
 
 const PENDING_STAKE_KEY = 'rubix_pending_stake';
 
@@ -95,7 +87,7 @@ export const StakingInterface = () => {
       setUserStakes(data);
       const total = data.reduce((sum: number, stake: Stake) => sum + Number(stake.amount), 0);
       const rewards = data.reduce(
-        (sum: number, stake: Stake) => sum + Number(calculateRewards(stake)),
+        (sum: number, stake: Stake) => sum + Number(calculateRewardsForStake(stake)),
         0
       );
       setTotalStaked(total);
@@ -188,13 +180,9 @@ export const StakingInterface = () => {
     }
   };
 
-  const calculateRewards = (stake: Stake) => {
+  const calculateRewardsForStake = (stake: Stake) => {
     const stakeStart = stake.start_time ?? stake.created_at;
-    const hoursStaked = Math.floor(
-      (Date.now() - new Date(stakeStart).getTime()) / (1000 * 60 * 60)
-    );
-    const hourlyRate = TOKEN_CONFIG.dailyRate / 100 / 24;
-    return (Number(stake.amount) * hourlyRate * hoursStaked).toFixed(4);
+    return calcRewards(Number(stake.amount), stakeStart).toFixed(4);
   };
 
   const symbol = TOKEN_CONFIG.symbol;
@@ -374,7 +362,7 @@ export const StakingInterface = () => {
                     <div>
                       <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Rewards</p>
                       <p className="text-base sm:text-xl font-bold text-green-400 truncate">
-                        {calculateRewards(stake)}
+                        {calculateRewardsForStake(stake)}
                       </p>
                       <p className="text-[10px] text-slate-600">{symbol}</p>
                     </div>

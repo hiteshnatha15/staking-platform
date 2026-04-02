@@ -13,11 +13,11 @@ export interface IStake extends Document {
 
 const stakeSchema = new Schema<IStake>({
   wallet_address: { type: String, required: true, index: true },
-  amount: { type: Number, required: true },
-  deposited_amount: { type: Number, default: null },
+  amount: { type: Number, required: true, min: 0 },
+  deposited_amount: { type: Number, default: null, min: 0 },
   start_time: { type: Date, default: Date.now },
   status: { type: String, enum: ['active', 'pending', 'withdrawn'], default: 'active', index: true },
-  transaction_signature: { type: String, default: null },
+  transaction_signature: { type: String, default: null, unique: true, sparse: true },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 export const Stake = mongoose.model<IStake>('Stake', stakeSchema);
