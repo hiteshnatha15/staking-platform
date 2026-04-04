@@ -1,144 +1,65 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { IconArrowDownCircle, IconClock, IconCheckCircle, IconXCircle, IconAlert, IconWallet } from './icons/ProIcons';
-import { getActiveStakes, getWithdrawals, insertWithdrawal, Stake, Withdrawal } from '../lib/api';
+import { IconArrowDownCircle, IconClock, IconCheckCircle, IconXCircle, IconWallet } from './icons/ProIcons';
+import { getAvailableBalance, getWithdrawals, requestWithdrawal, AvailableBalance, Withdrawal } from '../lib/api';
 import { TOKEN_CONFIG, formatTokenAmount } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
-import { calcTotalReleased, getDaysElapsed } from '../lib/stakeCalc';
 
 export const WithdrawalInterface = () => {
   const { publicKey } = useWallet();
   const toast = useToast();
-  const [userStakes, setUserStakes] = useState<Stake[]>([]);
+  const [balance, setBalance] = useState<AvailableBalance | null>(null);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
-  const [selectedStake, setSelectedStake] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   const symbol = TOKEN_CONFIG.symbol;
 
   useEffect(() => {
-    if (publicKey) {
-      fetchUserData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchUserData depends on publicKey
+    if (publicKey) fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicKey]);
 
-  const fetchUserData = async () => {
+  const fetchData = async () => {
     if (!publicKey) return;
+    const wallet = publicKey.toString();
     try {
-      const wallet = publicKey.toString();
-      const [stakes, withdrawalData] = await Promise.all([
-        getActiveStakes(wallet),
+      const [bal, wds] = await Promise.all([
+        getAvailableBalance(wallet),
         getWithdrawals(wallet),
       ]);
-      setUserStakes(stakes);
-      setWithdrawals(withdrawalData);
+      setBalance(bal);
+      setWithdrawals(wds);
     } catch (err) {
-      console.error('Failed to fetch user data:', err);
+      console.error('Failed to fetch withdrawal data:', err);
     }
   };
 
-  const withdrawnByStake = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const w of withdrawals) {
-      if (w.stake_id && (w.status === 'completed' || w.status === 'pending' || w.status === 'approved')) {
-        map[w.stake_id] = (map[w.stake_id] || 0) + Number(w.amount);
-      }
-    }
-    return map;
-  }, [withdrawals]);
+  const totalAvailable = balance?.total ?? 0;
 
-  const getAvailableForStake = (stake: Stake) => {
-    const principal = stake.deposited_amount != null ? Number(stake.deposited_amount) : Number(stake.amount);
-    const stakeDate = stake.start_time ?? stake.created_at;
-    const totalReleased = calcTotalReleased(principal, stakeDate);
-    const alreadyWithdrawn = withdrawnByStake[stake.id] || 0;
-    return Math.max(0, totalReleased - alreadyWithdrawn);
-  };
-
-  const selectedStakeData = userStakes.find((s) => s.id === selectedStake);
-  const selectedAvailable = selectedStakeData ? getAvailableForStake(selectedStakeData) : 0;
-
-  const handleWithdraw = async (stakeId: string, isAuto: boolean) => {
+  const handleWithdraw = async () => {
     if (!publicKey) return;
-
-    const stake = userStakes.find((s) => s.id === stakeId);
-    if (!stake) return;
-
-    const available = getAvailableForStake(stake);
-    const requestedAmount = Number(withdrawAmount);
-
-    if (!requestedAmount || requestedAmount <= 0) {
+    const requested = Number(withdrawAmount);
+    if (!requested || requested <= 0) {
       toast.error('Enter a valid withdrawal amount.');
       return;
     }
-    if (requestedAmount > available + 0.0001) {
-      toast.error(`Maximum available is ${formatTokenAmount(available)} ${symbol}`);
+    if (requested > totalAvailable + 0.0001) {
+      toast.error(`Maximum available is ${formatTokenAmount(totalAvailable)} ${symbol}`);
       return;
     }
 
-    const finalAmount = Math.min(requestedAmount, available);
-
     setIsWithdrawing(true);
     try {
-      await insertWithdrawal({
-        stake_id: stakeId,
-        wallet_address: publicKey.toString(),
-        amount: finalAmount,
-        withdrawal_type: isAuto ? 'auto' : 'manual',
-        status: isAuto ? 'completed' : 'pending',
-        transaction_signature: isAuto
-          ? `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-          : null,
-      });
-
-      if (isAuto) {
-        toast.success(`${finalAmount.toFixed(4)} ${symbol} withdrawn successfully!`);
-      } else {
-        toast.info('Withdrawal request submitted. Waiting for approval.');
-      }
-
-      setSelectedStake('');
+      await requestWithdrawal(publicKey.toString(), Math.min(requested, totalAvailable));
+      toast.info('Withdrawal request submitted. Admin will process it shortly.');
       setWithdrawAmount('');
-      await fetchUserData();
+      await fetchData();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Withdrawal failed. Please try again.';
       toast.error(msg);
-      console.error('Withdrawal error:', err);
     } finally {
       setIsWithdrawing(false);
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <IconCheckCircle className="w-5 h-5 text-green-500" />;
-      case 'pending':
-        return <IconClock className="w-5 h-5 text-amber-500" />;
-      case 'approved':
-        return <IconAlert className="w-5 h-5 text-blue-500" />;
-      case 'rejected':
-        return <IconXCircle className="w-5 h-5 text-red-500" />;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const base = 'px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-sm font-medium';
-    switch (status) {
-      case 'completed':
-        return `${base} bg-green-500/20 text-green-400`;
-      case 'pending':
-        return `${base} bg-amber-500/20 text-amber-400`;
-      case 'approved':
-        return `${base} bg-blue-500/20 text-blue-400`;
-      case 'rejected':
-        return `${base} bg-red-500/20 text-red-400`;
-      default:
-        return `${base} bg-slate-500/20 text-slate-400`;
     }
   };
 
@@ -154,198 +75,250 @@ export const WithdrawalInterface = () => {
     );
   }
 
+  const hasStakes = balance && balance.stakes.length > 0;
+  const pendingCount = withdrawals.filter(w => w.status === 'pending').length;
+  const completedCount = withdrawals.filter(w => w.status === 'completed').length;
+  const totalWithdrawn = withdrawals.filter(w => w.status === 'completed').reduce((s, w) => s + Number(w.amount), 0);
+
   return (
-    <div className="max-w-7xl mx-auto space-y-5 sm:space-y-8">
+    <div className="w-full space-y-5 sm:space-y-8">
+      {/* ─── Withdrawal Form ─── */}
       <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-8">
-        <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-1">Withdraw Staked {symbol}</h3>
+        <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-1">Withdraw {symbol}</h3>
         <p className="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6">
-          1% of your remaining staked balance is released daily for withdrawal.
+          1% of your remaining staked balance is released daily. Enter the amount and we'll handle the rest.
         </p>
 
-        {userStakes.length === 0 ? (
+        {!hasStakes ? (
           <div className="text-center py-10 sm:py-12">
             <IconArrowDownCircle className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-slate-500" />
-            <p className="text-sm sm:text-base text-slate-400">No active stakes to withdraw</p>
+            <p className="text-sm sm:text-base text-slate-400">No active stakes to withdraw from</p>
           </div>
         ) : (
-          <div className="space-y-4 sm:space-y-6">
-            <div className="space-y-2.5 sm:space-y-3">
-              {userStakes.map((stake) => {
-                const principal = stake.deposited_amount != null ? Number(stake.deposited_amount) : Number(stake.amount);
-                const stakeDate = stake.start_time ?? stake.created_at;
-                const days = getDaysElapsed(stakeDate);
-                const totalReleased = calcTotalReleased(principal, stakeDate);
-                const alreadyWithdrawn = withdrawnByStake[stake.id] || 0;
-                const available = Math.max(0, totalReleased - alreadyWithdrawn);
-                const releasedPercent = principal > 0 ? (totalReleased / principal) * 100 : 0;
-                const isSelected = selectedStake === stake.id;
+          <div className="space-y-5 sm:space-y-6">
+            {/* Total Available Banner */}
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 sm:p-6 text-center">
+              <p className="text-xs sm:text-sm text-slate-400 mb-1">Total Available for Withdrawal</p>
+              <p className="text-3xl sm:text-4xl font-bold text-emerald-400">
+                {formatTokenAmount(totalAvailable)}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">{symbol} across {balance!.stakes.length} stake{balance!.stakes.length > 1 ? 's' : ''}</p>
+            </div>
 
+            {/* Stake Breakdown */}
+            <div className="space-y-2">
+              <p className="text-xs sm:text-sm font-semibold text-slate-400">Stake Breakdown</p>
+              {balance!.stakes.map((s, i) => {
+                const releasedPercent = s.deposited > 0 ? (s.released / s.deposited) * 100 : 0;
                 return (
-                  <button
-                    key={stake.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedStake(isSelected ? '' : stake.id);
-                      setWithdrawAmount('');
-                    }}
-                    className={`w-full text-left rounded-xl p-3.5 sm:p-5 border transition-all ${
-                      isSelected
-                        ? 'border-violet-500/60 bg-violet-500/10'
-                        : 'border-slate-700/50 bg-slate-800/40 hover:border-slate-600'
-                    }`}
-                  >
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                  <div key={s.id} className="rounded-xl p-3 sm:p-4 border border-slate-700/50 bg-slate-800/40">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] sm:text-xs text-slate-500 font-medium">Stake #{i + 1}</span>
+                      <span className="text-[10px] sm:text-xs text-slate-500">{s.days} days</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-xs sm:text-sm">
                       <div>
-                        <p className="text-[10px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Deposited</p>
-                        <p className="text-base sm:text-lg font-bold text-slate-100 truncate">
-                          {formatTokenAmount(principal)}
-                        </p>
-                        <p className="text-[10px] text-slate-500">{symbol}</p>
+                        <p className="text-[10px] text-slate-500">Deposited</p>
+                        <p className="font-mono font-semibold text-slate-200">{formatTokenAmount(s.deposited)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Days</p>
-                        <p className="text-base sm:text-lg font-bold text-slate-100">{days}</p>
+                        <p className="text-[10px] text-slate-500">Withdrawn</p>
+                        <p className="font-mono font-semibold text-amber-400">{formatTokenAmount(s.withdrawn)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Withdrawn</p>
-                        <p className="text-base sm:text-lg font-bold text-amber-400 truncate">
-                          {formatTokenAmount(alreadyWithdrawn)}
-                        </p>
-                        <p className="text-[10px] text-slate-500">{symbol}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] sm:text-xs text-slate-500 mb-0.5 sm:mb-1">Available</p>
-                        <p className="text-base sm:text-lg font-bold text-green-400 truncate">
-                          {formatTokenAmount(available)}
-                        </p>
-                        <p className="text-[10px] text-slate-500">{symbol}</p>
+                        <p className="text-[10px] text-slate-500">Available</p>
+                        <p className="font-mono font-semibold text-green-400">{formatTokenAmount(s.available)}</p>
                       </div>
                     </div>
-                    <div className="mt-2.5 sm:mt-3">
-                      <div className="flex items-center justify-between text-[10px] sm:text-xs text-slate-500 mb-1">
-                        <span>Released: {releasedPercent.toFixed(2)}%</span>
-                        <span>
-                          {formatTokenAmount(totalReleased)} / {formatTokenAmount(principal)}
-                        </span>
-                      </div>
-                      <div className="h-1.5 sm:h-2 rounded-full bg-slate-700/60 overflow-hidden">
+                    <div className="mt-2">
+                      <div className="h-1.5 rounded-full bg-slate-700/60 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
                           style={{ width: `${Math.min(100, releasedPercent)}%` }}
                         />
                       </div>
+                      <p className="text-[9px] sm:text-[10px] text-slate-500 mt-1 text-right">
+                        {releasedPercent.toFixed(2)}% released
+                      </p>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
 
-            {selectedStake && selectedStakeData && (
-              <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-4 sm:p-6 space-y-3 sm:space-y-4">
-                <div>
-                  <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
-                    Withdrawal Amount
-                  </label>
-                  <div className="flex gap-2 sm:gap-3">
-                    <input
-                      type="number"
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                      placeholder={`0.00 ${symbol}`}
-                      max={selectedAvailable}
-                      step="any"
-                      className="flex-1 min-w-0 px-3 sm:px-4 py-3 rounded-xl bg-slate-800/80 border border-slate-600 text-slate-100 font-semibold placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setWithdrawAmount(selectedAvailable.toFixed(TOKEN_CONFIG.decimals))}
-                      className="px-3 sm:px-4 py-3 rounded-xl text-sm font-semibold text-violet-400 border border-violet-500/40 hover:bg-violet-500/10 active:bg-violet-500/20 transition-colors"
-                    >
-                      Max
-                    </button>
-                  </div>
-                  <p className="text-[10px] sm:text-xs text-slate-500 mt-1.5 sm:mt-2">
-                    Available: <span className="text-green-400 font-medium">{formatTokenAmount(selectedAvailable)} {symbol}</span>
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Withdrawal Input */}
+            <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-4 sm:p-6 space-y-3 sm:space-y-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-2">
+                  Withdrawal Amount
+                </label>
+                <div className="flex gap-2 sm:gap-3">
+                  <input
+                    type="number"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder={`0.00 ${symbol}`}
+                    max={totalAvailable}
+                    step="any"
+                    className="flex-1 min-w-0 px-3 sm:px-4 py-3 rounded-xl bg-slate-800/80 border border-slate-600 text-slate-100 font-semibold placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
                   <button
                     type="button"
-                    onClick={() => handleWithdraw(selectedStake, true)}
-                    disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) <= 0}
-                    className="btn-primary flex items-center justify-center gap-2 py-3.5 sm:py-4 text-sm sm:text-base disabled:opacity-50"
+                    onClick={() => setWithdrawAmount(totalAvailable.toFixed(TOKEN_CONFIG.decimals))}
+                    className="px-3 sm:px-4 py-3 rounded-xl text-sm font-semibold text-violet-400 border border-violet-500/40 hover:bg-violet-500/10 active:bg-violet-500/20 transition-colors"
                   >
-                    {isWithdrawing ? 'Processing...' : 'Auto Withdraw'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleWithdraw(selectedStake, false)}
-                    disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) <= 0}
-                    className="w-full px-4 sm:px-6 py-3.5 sm:py-4 rounded-xl font-semibold text-sm sm:text-base text-slate-100 bg-slate-700 hover:bg-slate-600 active:bg-slate-600 border border-slate-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isWithdrawing ? 'Processing...' : 'Manual Approval'}
+                    Max
                   </button>
                 </div>
+                <p className="text-[10px] sm:text-xs text-slate-500 mt-1.5 sm:mt-2">
+                  Available: <span className="text-green-400 font-medium">{formatTokenAmount(totalAvailable)} {symbol}</span>
+                </p>
               </div>
-            )}
+
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) <= 0}
+                className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 text-sm sm:text-base disabled:opacity-50"
+              >
+                {isWithdrawing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : 'Request Withdrawal'}
+              </button>
+            </div>
           </div>
         )}
       </div>
 
+      {/* ─── Withdrawal History ─── */}
       {withdrawals.length > 0 && (
-        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-8">
-          <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-4 sm:mb-6">Withdrawal History</h3>
-          <div className="space-y-2.5 sm:space-y-4">
-            {withdrawals.map((withdrawal) => (
-              <div
-                key={withdrawal.id}
-                className="rounded-xl p-3.5 sm:p-6 bg-slate-800/40 border border-slate-700/50 hover:border-violet-500/30 transition-colors"
-              >
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 items-center">
-                  <div>
-                    <p className="text-[10px] sm:text-sm text-slate-500 mb-0.5 sm:mb-1">Amount</p>
-                    <p className="text-base sm:text-lg font-semibold text-slate-100 truncate">
-                      {Number(withdrawal.amount).toFixed(4)}
-                    </p>
-                    <p className="text-[10px] text-slate-500 sm:hidden">{symbol}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-sm text-slate-500 mb-0.5 sm:mb-1">Type</p>
-                    <p className="text-base sm:text-lg font-semibold text-slate-200 capitalize">
-                      {withdrawal.withdrawal_type}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-sm text-slate-500 mb-0.5 sm:mb-1">Status</p>
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      {getStatusIcon(withdrawal.status)}
-                      <span className={getStatusBadge(withdrawal.status)}>
-                        {withdrawal.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-sm text-slate-500 mb-0.5 sm:mb-1">Date</p>
-                    <p className="text-xs sm:text-sm text-slate-300">
-                      {new Date(withdrawal.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="hidden md:block">
-                    {withdrawal.approved_by && (
-                      <>
-                        <p className="text-sm text-slate-500 mb-1">Approved By</p>
-                        <p className="text-xs text-slate-400 font-mono truncate max-w-[120px]">
-                          {withdrawal.approved_by.slice(0, 8)}...
-                        </p>
-                      </>
-                    )}
-                  </div>
+        <>
+          {/* Summary Stats */}
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+            <div className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-slate-500 text-[10px] sm:text-xs font-medium">Total Withdrawn</span>
+                <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg">
+                  <IconCheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" />
                 </div>
               </div>
-            ))}
+              <p className="text-base sm:text-xl font-bold text-green-400 truncate">{formatTokenAmount(totalWithdrawn)}</p>
+              <p className="text-[10px] text-slate-500">{symbol}</p>
+            </div>
+            <div className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-slate-500 text-[10px] sm:text-xs font-medium">Pending</span>
+                <div className="p-1.5 sm:p-2 bg-amber-500/10 rounded-lg">
+                  <IconClock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+                </div>
+              </div>
+              <p className="text-base sm:text-xl font-bold text-amber-400">{pendingCount}</p>
+              <p className="text-[10px] text-slate-500">Requests</p>
+            </div>
+            <div className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-slate-500 text-[10px] sm:text-xs font-medium">Completed</span>
+                <div className="p-1.5 sm:p-2 bg-emerald-500/10 rounded-lg">
+                  <IconArrowDownCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+                </div>
+              </div>
+              <p className="text-base sm:text-xl font-bold text-emerald-400">{completedCount}</p>
+              <p className="text-[10px] text-slate-500">Transactions</p>
+            </div>
           </div>
-        </div>
+
+          {/* History List */}
+          <div>
+            <h3 className="text-lg sm:text-2xl font-bold text-slate-100 mb-3 sm:mb-4">Withdrawal Requests</h3>
+            <div className="space-y-2.5 sm:space-y-3">
+              {withdrawals.map((w, index) => (
+                <div
+                  key={w.id}
+                  className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5 card-hover animate-slideUp"
+                  style={{ animationDelay: `${index * 60}ms` }}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
+                    {/* Amount */}
+                    <div>
+                      <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Amount</p>
+                      <p className="text-base sm:text-xl font-bold text-slate-100 truncate">
+                        {Number(w.amount).toFixed(4)}
+                      </p>
+                      <p className="text-[10px] text-slate-600">{symbol}</p>
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Status</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {w.status === 'pending' ? (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                            <span className="text-amber-400 text-[11px] sm:text-xs font-semibold">Pending</span>
+                          </div>
+                        ) : w.status === 'completed' ? (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                            <IconCheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
+                            <span className="text-emerald-400 text-[11px] sm:text-xs font-semibold">Completed</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg">
+                            <IconXCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-400" />
+                            <span className="text-red-400 text-[11px] sm:text-xs font-semibold">Rejected</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Date */}
+                    <div>
+                      <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Requested</p>
+                      <p className="text-base sm:text-xl font-bold text-slate-100">
+                        {new Date(w.created_at).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                      <p className="text-[10px] text-slate-600">
+                        {new Date(w.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+
+                    {/* Tx / Info */}
+                    <div className="col-span-2 sm:col-span-1">
+                      {w.transaction_signature ? (
+                        <>
+                          <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Transaction</p>
+                          <p className="font-mono text-[10px] sm:text-[11px] text-emerald-400/70 break-all leading-relaxed select-all truncate">
+                            {w.transaction_signature}
+                          </p>
+                        </>
+                      ) : w.status === 'pending' ? (
+                        <>
+                          <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Info</p>
+                          <p className="text-[11px] sm:text-xs text-slate-500 italic">
+                            Awaiting admin processing
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Info</p>
+                          <p className="text-[11px] sm:text-xs text-slate-500">-</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

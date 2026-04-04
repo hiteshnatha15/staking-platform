@@ -43,6 +43,8 @@ adminRouter.get('/stats', async (_req, res) => {
       totalStakes,
       pendingWithdrawals,
       pendingWithdrawalAmount,
+      pendingCommissionWithdrawals,
+      pendingCommissionWithdrawalAmount,
       stakes24h,
       totalRewardsClaimed,
       totalCommissions,
@@ -53,6 +55,8 @@ adminRouter.get('/stats', async (_req, res) => {
       Stake.countDocuments(),
       Withdrawal.countDocuments({ status: 'pending' }),
       Withdrawal.aggregate([{ $match: { status: 'pending' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+      CommissionWithdrawal.countDocuments({ status: 'pending' }),
+      CommissionWithdrawal.aggregate([{ $match: { status: 'pending' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       Stake.countDocuments({ created_at: { $gte: yesterday } }),
       RewardClaim.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
       CommissionEarning.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]),
@@ -65,6 +69,8 @@ adminRouter.get('/stats', async (_req, res) => {
       totalStakes,
       pendingWithdrawals,
       pendingWithdrawalAmount: pendingWithdrawalAmount[0]?.total ?? 0,
+      pendingCommissionWithdrawals,
+      pendingCommissionWithdrawalAmount: pendingCommissionWithdrawalAmount[0]?.total ?? 0,
       stakes24h,
       totalRewardsClaimed: totalRewardsClaimed[0]?.total ?? 0,
       totalCommissions: totalCommissions[0]?.total ?? 0,
@@ -189,15 +195,29 @@ adminRouter.get('/withdrawals', async (req, res) => {
 
 adminRouter.patch('/withdrawals/:id', async (req: AdminRequest, res) => {
   try {
-    const allowed = ['pending', 'approved', 'completed', 'rejected'];
+    const allowed = ['completed', 'rejected'];
     const newStatus = req.body.status;
     if (!newStatus || !allowed.includes(newStatus)) {
-      return res.status(400).json({ error: 'Invalid status' });
+      return res.status(400).json({ error: 'Invalid status. Use completed or rejected.' });
     }
 
-    const updates: Record<string, unknown> = { status: newStatus };
-    if (newStatus === 'approved' || newStatus === 'completed') {
-      updates.approved_by = req.adminUser || 'admin';
+    if (newStatus === 'completed') {
+      const txSig = req.body.transaction_signature;
+      if (!txSig || typeof txSig !== 'string' || txSig.trim().length < 10) {
+        return res.status(400).json({ error: 'Transaction signature is required to complete a withdrawal.' });
+      }
+    }
+
+    const updates: Record<string, unknown> = {
+      status: newStatus,
+      approved_by: req.adminUser || 'admin',
+    };
+
+    if (newStatus === 'completed') {
+      updates.transaction_signature = req.body.transaction_signature.trim();
+    }
+    if (newStatus === 'rejected' && req.body.reject_reason) {
+      updates.reject_reason = String(req.body.reject_reason).trim().slice(0, 500);
     }
 
     const doc = await Withdrawal.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true });
@@ -337,6 +357,9 @@ adminRouter.get('/commission-withdrawals', async (req, res) => {
     if (req.query.wallet) {
       filter.wallet_address = { $regex: req.query.wallet, $options: 'i' };
     }
+    if (req.query.status && req.query.status !== 'all') {
+      filter.status = req.query.status;
+    }
 
     const [docs, total] = await Promise.all([
       CommissionWithdrawal.find(filter).sort({ created_at: -1 }).skip(skip).limit(limit).lean(),
@@ -351,6 +374,41 @@ adminRouter.get('/commission-withdrawals', async (req, res) => {
     });
   } catch {
     res.status(500).json({ error: 'Failed to fetch commission withdrawals' });
+  }
+});
+
+adminRouter.patch('/commission-withdrawals/:id', async (req: AdminRequest, res) => {
+  try {
+    const allowed = ['completed', 'rejected'];
+    const newStatus = req.body.status;
+    if (!newStatus || !allowed.includes(newStatus)) {
+      return res.status(400).json({ error: 'Invalid status. Use completed or rejected.' });
+    }
+
+    if (newStatus === 'completed') {
+      const txSig = req.body.transaction_signature;
+      if (!txSig || typeof txSig !== 'string' || txSig.trim().length < 10) {
+        return res.status(400).json({ error: 'Transaction signature is required to complete a withdrawal.' });
+      }
+    }
+
+    const updates: Record<string, unknown> = {
+      status: newStatus,
+      approved_by: req.adminUser || 'admin',
+    };
+
+    if (newStatus === 'completed') {
+      updates.transaction_signature = req.body.transaction_signature.trim();
+    }
+    if (newStatus === 'rejected' && req.body.reject_reason) {
+      updates.reject_reason = String(req.body.reject_reason).trim().slice(0, 500);
+    }
+
+    const doc = await CommissionWithdrawal.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true });
+    if (!doc) return res.status(404).json({ error: 'Commission withdrawal not found' });
+    res.json({ ...doc.toObject(), id: String(doc._id) });
+  } catch {
+    res.status(500).json({ error: 'Failed to update commission withdrawal' });
   }
 });
 

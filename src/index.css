@@ -149,6 +149,11 @@
   }
 }
 
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   background: #0a0f1a;
   color: #e2e8f0;
@@ -166,7 +171,8 @@ html {
 }
 
 @supports (padding: env(safe-area-inset-bottom)) {
-  .pb-safe {
+  .pb-safe,
+  .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }

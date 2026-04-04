@@ -27,7 +27,7 @@ export interface Withdrawal {
   wallet_address: string;
   amount: number;
   status: 'pending' | 'approved' | 'completed' | 'rejected';
-  withdrawal_type: 'auto' | 'manual';
+  withdrawal_type: 'manual';
   approved_by: string | null;
   transaction_signature: string | null;
   created_at: string;

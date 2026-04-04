@@ -48,7 +48,7 @@ export const ReferralSection = () => {
   }
 
   return (
-    <div className="rounded-xl sm:rounded-2xl border border-slate-700/60 bg-gradient-to-br from-slate-900/90 to-slate-900/50 p-4 sm:p-6 shadow-xl">
+    <div className="rounded-xl sm:rounded-2xl border border-slate-700/60 bg-gradient-to-br from-slate-900/90 to-slate-900/50 p-4 sm:p-6 shadow-xl overflow-hidden">
       <div className="mb-4 sm:mb-6 flex items-center gap-2.5 sm:gap-3">
         <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600">
           <IconLink className="h-5 w-5 sm:h-6 sm:w-6 text-white" />

@@ -31,7 +31,7 @@ export const AdminApp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-[#0a0f1a] flex flex-col lg:flex-row overflow-x-hidden w-full">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-56 shrink-0 border-r border-slate-800/60 bg-[#0b1120] flex-col fixed inset-y-0 left-0 z-30">
         <div className="p-5 border-b border-slate-800/60">
@@ -78,8 +78,8 @@ export const AdminApp = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-56 pb-20 lg:pb-0">
-        <div className="p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 lg:ml-56 pb-20 lg:pb-0 min-w-0 overflow-x-hidden">
+        <div className="p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto">
           {activeTab === 'dashboard' && <AdminDashboard />}
           {activeTab === 'stakes' && <AdminStakes />}
           {activeTab === 'withdrawals' && <AdminWithdrawals />}

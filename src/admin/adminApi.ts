@@ -146,10 +146,14 @@ export async function getAdminWithdrawals(page = 1, wallet = '', status = 'all')
   return authFetch<Paginated<AdminWithdrawal>>(`/withdrawals?${params}`);
 }
 
-export async function updateWithdrawal(id: string, status: string): Promise<AdminWithdrawal> {
+export async function updateWithdrawal(
+  id: string,
+  status: string,
+  extra?: { transaction_signature?: string; reject_reason?: string },
+): Promise<AdminWithdrawal> {
   return authFetch<AdminWithdrawal>(`/withdrawals/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, ...extra }),
   });
 }
 
@@ -237,11 +241,25 @@ export interface AdminCommissionWithdrawal {
   amount: number;
   transaction_signature: string | null;
   status: string;
+  approved_by: string | null;
+  reject_reason: string | null;
   created_at: string;
 }
 
-export async function getAdminCommissionWithdrawals(page = 1, wallet = ''): Promise<Paginated<AdminCommissionWithdrawal>> {
+export async function getAdminCommissionWithdrawals(page = 1, wallet = '', status = 'all'): Promise<Paginated<AdminCommissionWithdrawal>> {
   const params = new URLSearchParams({ page: String(page) });
   if (wallet) params.set('wallet', wallet);
+  if (status !== 'all') params.set('status', status);
   return authFetch<Paginated<AdminCommissionWithdrawal>>(`/commission-withdrawals?${params}`);
+}
+
+export async function updateCommissionWithdrawal(
+  id: string,
+  status: string,
+  extra?: { transaction_signature?: string; reject_reason?: string },
+): Promise<AdminCommissionWithdrawal> {
+  return authFetch<AdminCommissionWithdrawal>(`/commission-withdrawals/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, ...extra }),
+  });
 }

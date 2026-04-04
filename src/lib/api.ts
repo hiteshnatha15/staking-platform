@@ -46,7 +46,7 @@ export interface Withdrawal {
   wallet_address: string;
   amount: number;
   status: 'pending' | 'approved' | 'completed' | 'rejected';
-  withdrawal_type: 'auto' | 'manual';
+  withdrawal_type: 'manual';
   approved_by: string | null;
   transaction_signature: string | null;
   created_at: string;
@@ -68,7 +68,9 @@ export interface CommissionWithdrawal {
   wallet_address: string;
   amount: number;
   transaction_signature: string | null;
-  status: string;
+  status: 'pending' | 'completed' | 'rejected';
+  approved_by: string | null;
+  reject_reason: string | null;
   created_at: string;
 }
 
@@ -121,19 +123,31 @@ export async function updateStakeStatus(txSignature: string, status: string): Pr
 
 // ── Withdrawals ──
 
+export interface AvailableStake {
+  id: string;
+  deposited: number;
+  days: number;
+  released: number;
+  withdrawn: number;
+  available: number;
+  created_at: string;
+}
+
+export interface AvailableBalance {
+  total: number;
+  stakes: AvailableStake[];
+}
+
+export async function getAvailableBalance(wallet: string): Promise<AvailableBalance> {
+  return get<AvailableBalance>(`/withdrawals/available?wallet_address=${wallet}`);
+}
+
 export async function getWithdrawals(wallet: string): Promise<Withdrawal[]> {
   return get<Withdrawal[]>(`/withdrawals?wallet_address=${wallet}`);
 }
 
-export async function insertWithdrawal(data: {
-  stake_id: string;
-  wallet_address: string;
-  amount: number;
-  withdrawal_type: string;
-  status: string;
-  transaction_signature: string | null;
-}): Promise<void> {
-  await post('/withdrawals', data);
+export async function requestWithdrawal(wallet: string, amount: number): Promise<void> {
+  await post('/withdrawals', { wallet_address: wallet, amount });
 }
 
 // ── Referrals ──
@@ -178,7 +192,6 @@ export async function getCommissionWithdrawals(wallet: string): Promise<Commissi
 export async function insertCommissionWithdrawal(data: {
   wallet_address: string;
   amount: number;
-  transaction_signature: string;
 }): Promise<void> {
   await post('/commissions/withdrawals', data);
 }

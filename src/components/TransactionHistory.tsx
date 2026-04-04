@@ -77,7 +77,7 @@ export const TransactionHistory = () => {
   const getAmountSign = (type: TxItem['type']) => (type === 'stake' ? '+' : '-');
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="w-full space-y-4 sm:space-y-6 overflow-hidden">
       <div className="flex items-center gap-2.5 sm:gap-3">
         <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-slate-700/60">
           <IconHistory className="h-5 w-5 sm:h-6 sm:w-6 text-slate-300" />

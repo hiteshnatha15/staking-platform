@@ -77,7 +77,7 @@ export const AdminDashboard = () => {
                     item.type === 'withdrawal' ? 'bg-violet-500/20 text-violet-400' :
                     'bg-cyan-500/20 text-cyan-400'
                   }`}>{item.type}</span>
-                  <span className="font-mono text-[11px] text-slate-300 break-all select-all">{item.wallet}</span>
+                  <span className="font-mono text-[11px] text-slate-300 break-all select-all truncate max-w-[140px] sm:max-w-none">{item.wallet}</span>
                 </div>
                 <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 pl-0 sm:pl-4">
                   <span className="font-mono text-sm font-semibold text-slate-100">{item.amount.toFixed(2)}</span>

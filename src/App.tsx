@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { BaseWalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { BitgetWalletButton } from './components/BitgetWalletButton';
 import {
   Coins,
   ArrowDownCircle,
@@ -15,7 +15,7 @@ import { StakingInterface } from './components/StakingInterface';
 import { WithdrawalInterface } from './components/WithdrawalInterface';
 import { TeamDashboard } from './components/TeamDashboard';
 import { LevelIncome } from './components/LevelIncome';
-import { RewardClaim } from './components/RewardClaim';
+
 import { ReferralSection } from './components/ReferralSection';
 import { TransactionHistory } from './components/TransactionHistory';
 import { getTvl, getReferralCount, lookupReferralCode, upsertReferral } from './lib/api';
@@ -23,7 +23,7 @@ import { TOKEN_CONFIG } from './lib/tokenConfig';
 import { fetchTokenPrice } from './lib/priceApi';
 import rubixLogo from './assets/rubix-logo.svg';
 
-type Tab = 'dashboard' | 'stake' | 'team' | 'income' | 'referral-wallet' | 'withdraw' | 'history';
+type Tab = 'dashboard' | 'stake' | 'team' | 'referral-wallet' | 'withdraw' | 'history';
 
 function App() {
   const { publicKey } = useWallet();
@@ -91,7 +91,6 @@ function App() {
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
     { id: 'stake', name: 'Stake', icon: Coins },
     { id: 'team', name: 'Team', icon: Users },
-    { id: 'income', name: 'Income', icon: DollarSign },
     { id: 'referral-wallet', name: 'Referral', icon: Wallet },
     { id: 'withdraw', name: 'Withdraw', icon: ArrowDownCircle },
     { id: 'history', name: 'History', icon: History },
@@ -155,11 +154,10 @@ function App() {
     amber: { icon: 'text-amber-400', bg: 'bg-amber-500/15', ring: 'ring-amber-500/20', subColor: 'text-slate-500' },
   };
 
-  const mainTabs = tabs.slice(0, 5);
-  const moreTabs = tabs.slice(5);
+  const mobileTabs = tabs;
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-slate-100">
+    <div className="min-h-screen bg-[#0a0f1a] text-slate-100 overflow-x-hidden w-full">
       {/* Animated background orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden>
         <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-emerald-500/[0.04] blur-[100px] animate-float" />
@@ -194,17 +192,7 @@ function App() {
                     {totalUsers.toLocaleString()} members
                   </span>
                 </div>
-                <BaseWalletMultiButton
-                  labels={{
-                    'change-wallet': 'Change',
-                    connecting: 'Connecting...',
-                    'copy-address': 'Copy address',
-                    copied: 'Copied',
-                    disconnect: 'Disconnect',
-                    'has-wallet': 'Connect',
-                    'no-wallet': 'Connect',
-                  }}
-                />
+                <BitgetWalletButton />
               </div>
             </div>
           </div>
@@ -243,7 +231,7 @@ function App() {
       </div>
 
       {/* Main content - extra bottom padding on mobile for bottom nav */}
-      <main className="relative z-10 max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 pb-24 sm:pb-6">
+      <main className="relative z-10 w-full max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 pb-24 sm:pb-6">
         {activeTab === 'dashboard' && (
           <div className="space-y-5 sm:space-y-8 animate-fadeIn">
             {/* Stat cards - clickable */}
@@ -320,13 +308,6 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'income' && (
-          <div className="animate-fadeIn space-y-4 sm:space-y-6">
-            <RewardClaim />
-            <LevelIncome />
-          </div>
-        )}
-
         {activeTab === 'referral-wallet' && (
           <div className="animate-fadeIn space-y-4 sm:space-y-6">
             <ReferralSection />
@@ -355,47 +336,27 @@ function App() {
 
       {/* Mobile bottom navigation */}
       <nav className="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-slate-700/60 bg-[#0a0f1a]/95 backdrop-blur-xl pb-safe">
-        <div className="grid grid-cols-5 gap-0">
-          {mainTabs.map((tab) => {
+        <div className="grid grid-cols-6 gap-0">
+          {mobileTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2 pt-2.5 transition-colors duration-150 ${
+                className={`relative flex flex-col items-center justify-center gap-0.5 py-2 pt-2.5 transition-colors duration-150 ${
                   isActive ? 'text-emerald-400' : 'text-slate-500 active:text-slate-300'
                 }`}
               >
                 <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-400' : ''}`} />
-                <span className="text-[10px] font-medium leading-tight">{tab.name}</span>
+                <span className="text-[9px] font-medium leading-tight">{tab.name}</span>
                 {isActive && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-b-full bg-emerald-400" />
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-b-full bg-emerald-400" />
                 )}
               </button>
             );
           })}
         </div>
-        {moreTabs.length > 0 && (
-          <div className="grid grid-cols-2 gap-0 border-t border-slate-800/40">
-            {moreTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center justify-center gap-1.5 py-2 transition-colors duration-150 ${
-                    isActive ? 'text-emerald-400' : 'text-slate-500 active:text-slate-300'
-                  }`}
-                >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-emerald-400' : ''}`} />
-                  <span className="text-[11px] font-medium">{tab.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </nav>
     </div>
   );

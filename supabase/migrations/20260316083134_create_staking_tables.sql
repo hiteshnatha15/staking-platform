@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS withdrawals (
   wallet_address text NOT NULL,
   amount numeric NOT NULL CHECK (amount > 0),
   status text DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'completed', 'rejected')),
-  withdrawal_type text DEFAULT 'auto' CHECK (withdrawal_type IN ('auto', 'manual')),
+  withdrawal_type text DEFAULT 'manual' CHECK (withdrawal_type IN ('manual')),
   approved_by text,
   transaction_signature text,
   created_at timestamptz DEFAULT now(),

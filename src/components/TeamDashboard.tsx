@@ -74,7 +74,7 @@ export const TeamDashboard = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="w-full space-y-4 sm:space-y-6 overflow-hidden">
       <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
         <div className="group rounded-xl sm:rounded-2xl border border-slate-700/60 bg-gradient-to-br from-slate-900/90 to-slate-900/50 p-3 sm:p-6 shadow-xl transition-all hover:border-emerald-500/30">
           <div className="mb-2 sm:mb-4 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-emerald-500/20">

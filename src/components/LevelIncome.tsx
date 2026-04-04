@@ -7,9 +7,13 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconArrowDownCircle,
-  IconChartTrendingUp,
 } from './icons/ProIcons';
-import { getCommissionEarnings, getCommissionWithdrawals, insertCommissionWithdrawal } from '../lib/api';
+import {
+  getCommissionEarnings,
+  getCommissionWithdrawals,
+  insertCommissionWithdrawal,
+  CommissionWithdrawal,
+} from '../lib/api';
 import { TOKEN_CONFIG, formatTokenAmount } from '../lib/tokenConfig';
 import { useToast } from '../contexts/ToastContext';
 
@@ -19,7 +23,7 @@ const REFERRAL_LEVELS = [
   { level: 3, percent: 3, label: 'Level 3' },
 ];
 
-const DAILY_RELEASE_RATE = 0.10; // 10% per day
+const DAILY_RELEASE_RATE = 0.10;
 
 interface EarningRecord {
   amount: number;
@@ -34,6 +38,15 @@ function calcReleasedForEarning(amount: number, earnedDate: string): number {
   return amount * (1 - Math.pow(1 - DAILY_RELEASE_RATE, daysElapsed));
 }
 
+const WithdrawalStatusBadge = ({ status }: { status: string }) => (
+  <span className={`px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium ${
+    status === 'completed' ? 'bg-green-500/20 text-green-400' :
+    status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+    status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+    'bg-slate-500/20 text-slate-400'
+  }`}>{status}</span>
+);
+
 export const LevelIncome = () => {
   const { publicKey } = useWallet();
   const toast = useToast();
@@ -41,7 +54,9 @@ export const LevelIncome = () => {
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [totalReleased, setTotalReleased] = useState(0);
   const [earningsByLevel, setEarningsByLevel] = useState<Record<number, number>>({});
+  const [withdrawals, setWithdrawals] = useState<CommissionWithdrawal[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
 
@@ -75,10 +90,14 @@ export const LevelIncome = () => {
     const fetchWithdrawn = async () => {
       try {
         const data = await getCommissionWithdrawals(publicKey.toString());
-        const sum = data.reduce((s, r) => s + Number(r.amount), 0);
+        setWithdrawals(data);
+        const sum = data
+          .filter((r) => r.status === 'pending' || r.status === 'completed')
+          .reduce((s, r) => s + Number(r.amount), 0);
         setTotalWithdrawn(sum);
       } catch {
         setTotalWithdrawn(0);
+        setWithdrawals([]);
       }
     };
 
@@ -106,11 +125,12 @@ export const LevelIncome = () => {
       await insertCommissionWithdrawal({
         wallet_address: publicKey.toString(),
         amount: finalAmount,
-        transaction_signature: `comm_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       });
-      toast.success(`${finalAmount.toFixed(4)} ${TOKEN_CONFIG.symbol} commission withdrawn!`);
+      toast.success('Withdrawal request submitted. Admin will process it shortly.');
       setTotalWithdrawn((w) => w + finalAmount);
       setWithdrawAmount('');
+      const data = await getCommissionWithdrawals(publicKey.toString());
+      setWithdrawals(data);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Commission withdraw failed');
     } finally {
@@ -120,6 +140,7 @@ export const LevelIncome = () => {
 
   const lockedAmount = Math.max(0, totalEarnings - totalReleased);
   const releasedPercent = totalEarnings > 0 ? (totalReleased / totalEarnings) * 100 : 0;
+  const pendingCount = withdrawals.filter((w) => w.status === 'pending').length;
 
   if (!publicKey) {
     return (
@@ -132,7 +153,7 @@ export const LevelIncome = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="w-full space-y-4 sm:space-y-6 overflow-hidden">
       <div className="rounded-xl sm:rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-4 sm:p-6">
         <div className="mb-3 sm:mb-4 flex items-center gap-2.5 sm:gap-3">
           <div className="flex h-11 w-11 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl bg-amber-500/20">
@@ -182,6 +203,15 @@ export const LevelIncome = () => {
           </div>
         )}
 
+        {pendingCount > 0 && (
+          <div className="mb-3 sm:mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2.5 flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+            <p className="text-xs sm:text-sm text-amber-400 font-medium">
+              {pendingCount} withdrawal request{pendingCount > 1 ? 's' : ''} pending admin approval
+            </p>
+          </div>
+        )}
+
         {availableToWithdraw > 0 && (
           <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 p-3 sm:p-4 space-y-2.5 sm:space-y-3">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -213,25 +243,74 @@ export const LevelIncome = () => {
               {isWithdrawing ? (
                 <>
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Withdrawing...
+                  Submitting...
                 </>
               ) : (
                 <>
                   <IconArrowDownCircle className="h-5 w-5" />
-                  Withdraw Commission
+                  Request Withdrawal
                 </>
               )}
             </button>
           </div>
         )}
 
-        {totalEarnings > 0 && availableToWithdraw <= 0 && (
+        {totalEarnings > 0 && availableToWithdraw <= 0 && pendingCount === 0 && (
           <p className="text-xs sm:text-sm text-slate-500 text-center py-2">
             No funds available yet. 10% of remaining balance is released daily.
           </p>
         )}
       </div>
 
+      {/* Withdrawal History */}
+      {withdrawals.length > 0 && (
+        <div className="rounded-xl sm:rounded-2xl border border-slate-700/60 bg-slate-900/60 overflow-hidden">
+          <button
+            onClick={() => setHistoryExpanded(!historyExpanded)}
+            className="flex w-full items-center justify-between p-4 sm:p-6 text-left hover:bg-slate-800/40"
+          >
+            <div className="flex items-center gap-2">
+              <IconArrowDownCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
+              <h3 className="text-sm sm:text-lg font-bold text-slate-100">Withdrawal Requests</h3>
+              <span className="text-[10px] sm:text-xs text-slate-500 font-medium">({withdrawals.length})</span>
+            </div>
+            {historyExpanded ? (
+              <IconChevronUp className="h-5 w-5 text-slate-400" />
+            ) : (
+              <IconChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+          </button>
+
+          {historyExpanded && (
+            <div className="border-t border-slate-700/60 divide-y divide-slate-700/40">
+              {withdrawals.map((w) => (
+                <div key={w.id} className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="font-mono text-sm sm:text-base font-semibold text-slate-100">
+                        {formatTokenAmount(w.amount)} {TOKEN_CONFIG.symbol}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-slate-500">
+                        {new Date(w.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <WithdrawalStatusBadge status={w.status} />
+                    {w.reject_reason && (
+                      <span className="text-[10px] sm:text-xs text-red-400/80 max-w-[200px] truncate" title={w.reject_reason}>
+                        {w.reject_reason}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3-Level Referral Structure */}
       <div className="rounded-xl sm:rounded-2xl border border-slate-700/60 bg-slate-900/60 overflow-hidden">
         <button
           onClick={() => setExpanded(!expanded)}

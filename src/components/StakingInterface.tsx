@@ -128,7 +128,7 @@ export const StakingInterface = () => {
         // Phase 1: Build transaction (before wallet popup)
         const { transaction } = await buildVaultTransaction(publicKey, amountRaw);
 
-        // Phase 2: Send via wallet adapter (sign + send atomically, avoids Phantom reload bug)
+        // Phase 2: Send via wallet adapter (sign + send atomically)
         const signature = await sendTransaction(transaction, connection, {
           skipPreflight: true,
           maxRetries: 3,
@@ -351,7 +351,7 @@ export const StakingInterface = () => {
                   className="glass-card rounded-xl sm:rounded-2xl p-3 sm:p-5 card-hover animate-slideUp"
                   style={{ animationDelay: `${index * 80}ms` }}
                 >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-6 lg:grid-cols-5">
                     <div>
                       <p className="text-slate-500 text-[10px] sm:text-xs mb-0.5 sm:mb-1">Staked</p>
                       <p className="text-base sm:text-xl font-bold text-slate-100 truncate">
