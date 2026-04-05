@@ -6,14 +6,7 @@ import { clusterApiUrl } from '@solana/web3.js';
 
 const FREE_RPC = 'https://solana-rpc.publicnode.com';
 
-function isMobileDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
-}
-
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const isMobile = useMemo(() => isMobileDevice(), []);
 
   const endpoint = useMemo(() => {
     const rpc = import.meta.env.VITE_SOLANA_RPC;
@@ -23,14 +16,11 @@ export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children })
     return rpc || FREE_RPC || clusterApiUrl(WalletAdapterNetwork.Devnet);
   }, []);
 
-  const wallets = useMemo(
-    () => isMobile ? [] : [new BitKeepWalletAdapter()],
-    [isMobile]
-  );
+  const wallets = useMemo(() => [new BitKeepWalletAdapter()], []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect={!isMobile}>
+      <WalletProvider wallets={wallets} autoConnect>
         {children}
       </WalletProvider>
     </ConnectionProvider>
