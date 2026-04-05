@@ -1,4 +1,5 @@
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 const BITGET_NAMES = ['bitget wallet', 'bitkeep', 'bitget'];
@@ -74,7 +75,7 @@ export const BitgetWalletButton: FC = () => {
     ? `${publicKey.toBase58().slice(0, 4)}..${publicKey.toBase58().slice(-4)}`
     : '';
 
-  const mobileSheet = showMobileSheet && (
+  const mobileSheetContent = showMobileSheet ? (
     <div
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) setShowMobileSheet(false); }}
@@ -131,9 +132,86 @@ export const BitgetWalletButton: FC = () => {
         <div className="h-safe-bottom" />
       </div>
     </div>
-  );
+  ) : null;
+
+  const mobileSheet = mobileSheetContent ? createPortal(mobileSheetContent, document.body) : null;
+
+  const connectedMenuContent = menuOpen ? (
+    <div className="px-4 py-3 border-b border-slate-800/60">
+      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Connected</p>
+      <p className="text-xs text-slate-300 font-mono truncate">{publicKey?.toBase58()}</p>
+    </div>
+  ) : null;
 
   if (connected && publicKey) {
+    const menuDropdown = menuOpen ? (
+      isMobile ? createPortal(
+        <div className="fixed inset-0 z-[100]" onClick={() => setMenuOpen(false)}>
+          <div className="fixed inset-0 bg-black/40" />
+          <div
+            className="fixed bottom-0 inset-x-0 rounded-t-2xl border border-slate-700/60 bg-slate-900 shadow-2xl shadow-black/40 animate-slideUp z-[101]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3">
+              <div className="h-1 w-10 rounded-full bg-slate-600" />
+            </div>
+            <div className="px-5 py-4 border-b border-slate-800/60">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Connected Wallet</p>
+              <p className="text-sm text-slate-300 font-mono break-all">{publicKey.toBase58()}</p>
+            </div>
+            <button
+              onClick={handleCopy}
+              className="w-full flex items-center gap-3 px-5 py-4 text-base text-slate-300 active:bg-slate-800 transition-colors"
+            >
+              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+              </svg>
+              {copied ? 'Copied!' : 'Copy Address'}
+            </button>
+            <button
+              onClick={handleDisconnect}
+              className="w-full flex items-center gap-3 px-5 py-4 text-base text-red-400 active:bg-slate-800 transition-colors"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+              </svg>
+              Disconnect
+            </button>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="w-full px-5 py-3.5 text-sm font-medium text-slate-500 active:text-slate-300 transition-colors border-t border-slate-800/60"
+            >
+              Cancel
+            </button>
+            <div className="h-safe-bottom" />
+          </div>
+        </div>,
+        document.body
+      ) : (
+        <div className="absolute right-0 mt-2 w-44 rounded-xl border border-slate-700/60 bg-slate-900 shadow-xl shadow-black/30 overflow-hidden z-50">
+          {connectedMenuContent}
+          <button
+            onClick={handleCopy}
+            className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 active:bg-slate-700 transition-colors"
+          >
+            <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+            </svg>
+            {copied ? 'Copied!' : 'Copy Address'}
+          </button>
+          <button
+            onClick={handleDisconnect}
+            className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:bg-slate-800 active:bg-slate-700 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+            </svg>
+            Disconnect
+          </button>
+        </div>
+      )
+    ) : null;
+
     return (
       <>
         {mobileSheet}
@@ -152,38 +230,7 @@ export const BitgetWalletButton: FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-
-          {menuOpen && (
-            <>
-              {isMobile && (
-                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              )}
-              <div className={`absolute right-0 mt-2 rounded-xl border border-slate-700/60 bg-slate-900 shadow-xl shadow-black/30 overflow-hidden z-50 ${isMobile ? 'w-56' : 'w-44'}`}>
-                <div className="px-4 py-3 border-b border-slate-800/60">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Connected</p>
-                  <p className="text-xs text-slate-300 font-mono truncate">{publicKey.toBase58()}</p>
-                </div>
-                <button
-                  onClick={handleCopy}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 active:bg-slate-700 transition-colors"
-                >
-                  <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
-                  </svg>
-                  {copied ? 'Copied!' : 'Copy Address'}
-                </button>
-                <button
-                  onClick={handleDisconnect}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:bg-slate-800 active:bg-slate-700 transition-colors"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                  </svg>
-                  Disconnect
-                </button>
-              </div>
-            </>
-          )}
+          {menuDropdown}
         </div>
       </>
     );

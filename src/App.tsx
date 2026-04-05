@@ -23,7 +23,7 @@ import { TOKEN_CONFIG } from './lib/tokenConfig';
 import { fetchTokenPrice } from './lib/priceApi';
 import rubixLogo from './assets/rubix-logo.svg';
 
-type Tab = 'dashboard' | 'stake' | 'team' | 'referral-wallet' | 'wallet' | 'withdraw' | 'history';
+type Tab = 'dashboard' | 'stake' | 'team' | 'referral-wallet' | 'withdraw' | 'history';
 
 function App() {
   const { publicKey } = useWallet();
@@ -154,14 +154,7 @@ function App() {
     amber: { icon: 'text-amber-400', bg: 'bg-amber-500/15', ring: 'ring-amber-500/20', subColor: 'text-slate-500' },
   };
 
-  const mobileTabs: { id: Tab; name: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
-    { id: 'stake', name: 'Stake', icon: Coins },
-    { id: 'wallet', name: 'Wallet', icon: Wallet },
-    { id: 'team', name: 'Team', icon: Users },
-    { id: 'withdraw', name: 'Withdraw', icon: ArrowDownCircle },
-    { id: 'history', name: 'History', icon: History },
-  ];
+  const mobileTabs = tabs;
 
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-slate-100 overflow-x-hidden w-full">
@@ -322,73 +315,6 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'wallet' && (
-          <div className="animate-fadeIn space-y-4 sm:space-y-6">
-            {publicKey ? (
-              <>
-                <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-5 backdrop-blur-sm">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 ring-1 ring-emerald-500/25">
-                      <Wallet className="h-5 w-5 text-emerald-400" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-slate-400">Connected Wallet</p>
-                      <p className="text-sm font-mono text-white truncate">{publicKey.toBase58()}</p>
-                    </div>
-                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(publicKey.toBase58());
-                      }}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-slate-700/60 bg-slate-800/70 px-3 py-2 text-xs font-medium text-slate-300 active:scale-[0.97] transition-all"
-                    >
-                      <svg className="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
-                      </svg>
-                      Copy Address
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('stake')}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-500/15 active:scale-[0.97] transition-all"
-                    >
-                      <Coins className="h-3.5 w-3.5" />
-                      Stake Now
-                    </button>
-                  </div>
-                </div>
-                <ReferralSection />
-                <LevelIncome />
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 px-4">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-600/20 ring-1 ring-emerald-500/25">
-                  <Wallet className="h-10 w-10 text-emerald-400" />
-                </div>
-                <h2 className="text-xl font-bold text-white mb-2 text-center">Connect Your Wallet</h2>
-                <p className="text-sm text-slate-400 text-center max-w-xs mb-8 leading-relaxed">
-                  Connect your Bitget Wallet to start staking, earn referral rewards, and manage your assets.
-                </p>
-                <BitgetWalletButton />
-                <div className="mt-8 grid grid-cols-3 gap-3 w-full max-w-xs">
-                  {[
-                    { label: 'Stake', desc: 'Earn daily', icon: Coins },
-                    { label: 'Refer', desc: '3 levels', icon: Users },
-                    { label: 'Withdraw', desc: 'Anytime', icon: ArrowDownCircle },
-                  ].map((f) => (
-                    <div key={f.label} className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-800/60 bg-slate-900/40 p-3">
-                      <f.icon className="h-5 w-5 text-slate-500" />
-                      <p className="text-xs font-semibold text-slate-300">{f.label}</p>
-                      <p className="text-[10px] text-slate-500">{f.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {activeTab === 'withdraw' && (
           <div className="animate-fadeIn">
             <WithdrawalInterface />
@@ -414,36 +340,6 @@ function App() {
           {mobileTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            const isWallet = tab.id === 'wallet';
-            const walletConnected = !!publicKey;
-
-            if (isWallet) {
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex flex-col items-center justify-center gap-0.5 py-2 pt-2.5 transition-colors duration-150 ${
-                    isActive
-                      ? 'text-emerald-400'
-                      : walletConnected
-                        ? 'text-emerald-400/70 active:text-emerald-300'
-                        : 'text-slate-500 active:text-slate-300'
-                  }`}
-                >
-                  <div className="relative">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-400' : walletConnected ? 'text-emerald-400/70' : ''}`} />
-                    {walletConnected && (
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#0a0f1a]" />
-                    )}
-                  </div>
-                  <span className="text-[9px] font-medium leading-tight">{walletConnected ? 'Wallet' : 'Connect'}</span>
-                  {isActive && (
-                    <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-b-full bg-emerald-400" />
-                  )}
-                </button>
-              );
-            }
-
             return (
               <button
                 key={tab.id}
