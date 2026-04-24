@@ -18,6 +18,10 @@ const PORT = parseInt(process.env.PORT || '8080', 10);
 const app = express();
 app.use(express.json({ limit: '16kb' }));
 
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
 app.use('/api/stakes', stakesRouter);
 app.use('/api/withdrawals', withdrawalsRouter);
 app.use('/api/referrals', referralsRouter);
